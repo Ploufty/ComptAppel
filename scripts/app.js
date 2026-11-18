@@ -288,6 +288,7 @@
     const f = e.target.files[0];
     e.target.value = '';
     if (!f) return;
+    if (f.size > 2e6) { $('fileMsg').textContent = 'Fichier trop volumineux (2 Mo maximum).'; return; }
     f.text().then(t => {
       const o = JSON.parse(t);
       if (!o || typeof o !== 'object' || typeof o.months !== 'object') throw new Error('format');

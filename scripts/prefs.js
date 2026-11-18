@@ -8,6 +8,6 @@ function applyPrefs() {
   else if (HOST_THEME) ROOT.dataset.theme = HOST_THEME; else delete ROOT.dataset.theme;
   ROOT.dataset.motion = P.motion === 'reduce' || (P.motion !== 'on' && mq('(prefers-reduced-motion: reduce)')) ? 'reduce' : 'full';
   ROOT.dataset.contrast = P.contrast === true ? 'high' : 'normal';
-  ROOT.style.setProperty('--text-scale', ({ 115: 1.15, 130: 1.3 })[P.text] || 1);
+  ROOT.style.setProperty('--text-scale', P.text === '115' ? 1.15 : P.text === '130' ? 1.3 : 1); // liste blanche : une valeur piégée ne passe pas
 }
 applyPrefs();
