@@ -65,7 +65,7 @@
       <div class="meter" aria-hidden="true"><span id="meter"></span></div>
       <dl class="stats" id="stats"></dl>
       <div class="tw"><table id="res"></table></div>
-      <div class="bar"><button type="button" class="btn primary" id="copy">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
+      <div class="bar"><button type="button" class="btn primary" id="copy" data-tip="Copie le résultat du mois pour le coller dans un message ou un document.">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
     </section>
 
     <section class="pane" id="p-annee" role="tabpanel" aria-labelledby="t-annee">
@@ -73,9 +73,9 @@
       <div class="tw"><table id="recap"></table></div>
       <div class="tw"><table id="recapLv"></table></div>
       <div class="bar">
-        <button type="button" class="btn primary" id="save">Enregistrer un fichier</button>
-        <button type="button" class="btn primary" id="pdf">Exporter en PDF</button>
-        <button type="button" class="btn" id="loadBtn">Charger un fichier</button>
+        <button type="button" class="btn primary" id="save" data-tip="Télécharge toute la saisie de l'année dans un fichier .json, à garder comme sauvegarde.">Enregistrer un fichier</button>
+        <button type="button" class="btn primary" id="pdf" data-tip="Crée un PDF avec les tableaux de chaque mois et le cumul de l'année.">Exporter en PDF</button>
+        <button type="button" class="btn" id="loadBtn" data-tip="Recharge un fichier .json enregistré avant. Une confirmation est demandée : il remplace la saisie actuelle.">Charger un fichier</button>
         <input type="file" id="load" accept=".json,application/json" hidden>
       </div>
       <div class="ask" id="importAsk" hidden>
