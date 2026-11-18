@@ -8,7 +8,7 @@
   --sh-sm:3px 3px 8px #b4bece,-3px -3px 8px #ffffff;
   --sh-in:inset 4px 4px 9px #b4bece,inset -4px -4px 9px #ffffff;
   --blob1:#E88D67; --blob2:#9999C3; --blob3:#C0E6DE; --blob-op:.35;
-  --f:'Figtree','Marianne',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --f:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; /* police du système : aucune requête vers un site tiers */
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1d2133; --fg:#e9ecf7; --muted:#a8afca; --line:rgba(233,236,247,.18);
