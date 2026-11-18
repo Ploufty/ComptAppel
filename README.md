@@ -43,3 +43,7 @@ outil.json            Fiche outil (intégration Apps1D76)
 ## Intégration dans Apps1D76
 
 Copier ce dépôt (sans `.git`) sous `Outils/comptappel/` (fiche `outil.json` incluse), puis `npm run generer`. L'icône maison de l'en-tête renvoie vers `../../index.html` (accueil) et le pied de page vers `../../accessibilite.html` : ces deux liens ne fonctionnent qu'une fois le dossier à cet emplacement.
+
+## Licence
+
+ComptAppel est un logiciel libre, publié sous licence **GNU Affero General Public License v3.0 ou ultérieure** (AGPL-3.0-or-later). Le texte complet est dans le fichier [`LICENSE`](LICENSE). Toute version modifiée, y compris proposée en ligne, doit rester sous la même licence et fournir son code source.
