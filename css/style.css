@@ -1,5 +1,7 @@
 /* Structure reprise d'Apps1D76 : brandbar, hero, catnav, panneaux, dialogue d'affichage, pied de page.
    Palette : E88D67 orange · BB999C mauve · 9999C3 lavande · 7B8CDE bleu · C0E6DE menthe. Style doux (neumorphique). */
+/* Figtree (licence SIL OFL 1.1, voir fonts/OFL.txt), hébergée ici : aucune requête vers un site tiers */
+@font-face{font-family:'Figtree';src:url(../fonts/figtree-latin-wght-normal.woff2) format('woff2');font-weight:300 900;font-style:normal;font-display:swap}
 :root{
   --c-orange:#E88D67; --c-mauve:#BB999C; --c-lav:#9999C3; --c-blue:#7B8CDE; --c-mint:#C0E6DE;
   --bg:#E8EDF2; --fg:#232842; --muted:#586078; --line:rgba(35,40,66,.16); --bw:1.5px; --edge:#78859e;
@@ -8,7 +10,7 @@
   --sh-sm:3px 3px 8px #b4bece,-3px -3px 8px #ffffff;
   --sh-in:inset 4px 4px 9px #b4bece,inset -4px -4px 9px #ffffff;
   --blob1:#E88D67; --blob2:#9999C3; --blob3:#C0E6DE; --blob-op:.35;
-  --f:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; /* police du système : aucune requête vers un site tiers */
+  --f:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1d2133; --fg:#e9ecf7; --muted:#a8afca; --line:rgba(233,236,247,.18);

@@ -47,3 +47,7 @@ Copier ce dépôt (sans `.git`) sous `Outils/comptappel/` (fiche `outil.json` in
 ## Licence
 
 ComptAppel est un logiciel libre, publié sous licence **GNU Affero General Public License v3.0 ou ultérieure** (AGPL-3.0-or-later). Le texte complet est dans le fichier [`LICENSE`](LICENSE). Toute version modifiée, y compris proposée en ligne, doit rester sous la même licence et fournir son code source.
+
+## Police
+
+Figtree (variable, sous-ensemble latin) est hébergée dans `fonts/`, sous licence SIL Open Font License 1.1 (`fonts/OFL.txt`). Aucune requête vers un site tiers n'est faite au chargement.
