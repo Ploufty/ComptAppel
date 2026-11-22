@@ -40,6 +40,8 @@
 </header>
 
 <main class="container" id="main">
+  <nav class="months" id="months" aria-label="Mois de l'année : un mois terminé est surligné"></nav>
+
   <button type="button" class="calbtn" id="calBtn" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
     <span id="calTxt"></span><span class="calmod">Modifier</span>
@@ -55,7 +57,7 @@
     <section class="pane" id="p-saisie" role="tabpanel" aria-labelledby="t-saisie">
       <div class="pane-head"><h2>Saisie du mois</h2><button type="button" class="btn" id="lvBtn" aria-haspopup="dialog">Niveaux</button></div>
       <div id="rows"></div>
-      <p class="hint" id="rowsHint">Élèves présents tout le mois, absences en demi-journées (une journée entière = 2). Le bouton <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg> à droite d'une ligne sert à signaler l'arrivée ou le départ d'un élève en cours de mois. Entrée passe au champ suivant.</p>
+      <p class="hint" id="rowsHint">Élèves présents tout le mois, absences en demi-journées (une journée entière = 2). Le bouton <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg> à droite d'une ligne sert à signaler l'arrivée ou le départ d'un élève en cours de mois. Entrée passe au champ suivant. Les élèves sont repris du mois précédent (arrivées et départs inclus) : modifiez-les si besoin.</p>
     </section>
 
     <section class="pane" id="p-resultat" role="tabpanel" aria-labelledby="t-resultat">
@@ -64,7 +66,7 @@
       <div class="meter" aria-hidden="true"><span id="meter"></span></div>
       <dl class="stats" id="stats"></dl>
       <div class="tw"><table id="res"></table></div>
-      <div class="bar"><button type="button" class="btn primary" id="copy" data-tip="Copie le résultat du mois pour le coller dans un message ou un document.">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
+      <div class="bar"><button type="button" class="btn primary" id="copy" data-tip="Copie le tableau du mois en texte brut, colonnes séparées par des tabulations : à coller dans un tableur ou un document.">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
     </section>
 
     <section class="pane" id="p-annee" role="tabpanel" aria-labelledby="t-annee">
@@ -97,7 +99,7 @@
 <dialog id="dlgCal" aria-labelledby="cal-title">
   <div class="settings">
     <div class="settings-head"><h2 id="cal-title">Calendrier du mois</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <p class="hint">Réglages propres à ce mois : un nouveau mois reprend ceux du mois précédent.</p>
+    <p class="hint">La zone est la même pour toute l'année. Rythme, total et jours sans classe sont propres à ce mois ; un nouveau mois reprend ceux du mois précédent.</p>
     <fieldset><legend>Zone</legend><div class="seg" id="zone"></div></fieldset>
     <fieldset><legend>Rythme</legend><div class="seg" id="rhythm"></div></fieldset>
     <div class="fld"><label for="days">Demi-journées de classe</label>

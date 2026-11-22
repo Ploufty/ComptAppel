@@ -217,3 +217,13 @@ dialog .fld{align-items:flex-start}
 dialog .mv{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
 dialog input[type=date]{width:auto}
 dialog .seg,dialog .chips{justify-content:flex-start}
+
+/* Bandeau des mois : défilement horizontal sur petit écran ; mois terminé surligné (fond + ✓, pas la couleur seule) */
+.months{display:flex;gap:8px;overflow-x:auto;padding:8px 4px 12px;margin-top:4px;scroll-snap-type:x proximity}
+.months button{flex:none;min-height:44px;min-width:56px;padding:6px 12px;border-radius:999px;border:var(--bw) solid var(--edge);background:var(--bg);box-shadow:var(--sh-sm);color:var(--fg);font:600 .88rem var(--f);cursor:pointer;scroll-snap-align:center}
+.months button.done{background:var(--soft);border-color:var(--link);font-weight:700}
+.months button.done::before{content:"✓ "}
+.months button[aria-current="true"]{box-shadow:var(--sh-in);font-weight:800;text-decoration:underline;text-underline-offset:4px}
+.months button:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+@media (min-width:900px){.months{justify-content:center;overflow-x:visible;flex-wrap:wrap}}
+tr.done td:first-child::after{content:" ✓";color:var(--link);font-weight:800}

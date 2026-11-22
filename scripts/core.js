@@ -8,8 +8,11 @@
   const MOIS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
   const MAX = { eleves: 60, abs: 5000, days: 80, moves: 30, off: 31, label: 60 };
 
+  const MOIS_COURT = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+  const ZONES = ['A', 'B', 'C', 'Corse'];
   const YEARS = Object.keys(Cal.CALENDARS);
   const mlabel = mk => MOIS[+mk.slice(5, 7) - 1] + ' ' + mk.slice(0, 4);
+  const mshort = mk => MOIS_COURT[+mk.slice(5, 7) - 1];
   const fmt = x => x.toFixed(2).replace('.', ',');
 
   function defaultYear(today) {
@@ -18,7 +21,7 @@
   }
   function fresh(today) {
     const year = defaultYear(today), ms = Cal.schoolMonths(year), cur = (today || new Date().toISOString()).slice(0, 7);
-    return { version: 3, year, month: ms.includes(cur) ? cur : ms[0], months: {} };
+    return { version: 3, year, zone: 'A', month: ms.includes(cur) ? cur : ms[0], months: {} };
   }
 
   // --- Normalisation : tout ce qui vient de localStorage ou d'un fichier passe par ici. Jamais d'exception.
@@ -51,7 +54,6 @@
       .filter(x => x.date && !seen.has(x.date) && seen.add(x.date)).slice(0, MAX.off);
     const days = int(m.days, MAX.days);
     return {
-      zone: ['A', 'B', 'C', 'Corse'].includes(m.zone) ? m.zone : 'A',
       rhythm: m.rhythm === '4.5' ? '4.5' : '4',
       levels, days: days === '' ? null : days, off, lv
     };
@@ -61,6 +63,9 @@
     const s = fresh(today), r = raw;
     if (!isObj(r)) return s;
     if (YEARS.includes(r.year)) s.year = r.year;
+    // La zone est commune à toute l'année. Anciens fichiers : zone du premier mois qui en avait une.
+    const old = isObj(r.months) ? Object.keys(r.months).sort().map(k => isObj(r.months[k]) && r.months[k].zone).find(z => ZONES.includes(z)) : null;
+    s.zone = ZONES.includes(r.zone) ? r.zone : old || 'A';
     const ms = Cal.schoolMonths(s.year);
     s.month = ms.includes(r.month) ? r.month : ms.includes(s.month) ? s.month : ms[0];
     if (isObj(r.months)) for (const mk of Object.keys(r.months)) {
@@ -69,45 +74,56 @@
     return s;
   }
 
-  // --- Mois : un mois absent hérite zone, rythme et niveaux du dernier mois saisi avant lui (sinon du plus proche).
+  const num = v => typeof v === 'number' ? v : 0;
+  // Effectif repris du mois précédent : élèves du mois + arrivées − départs (modifiable ensuite)
+  function carry(p) {
+    const lv = {};
+    for (const l of p.levels) {
+      const d = p.lv[l];
+      if (!d) continue;
+      const n = num(d.n) + d.moves.filter(x => x.t === 'a').length - d.moves.filter(x => x.t === 'd').length;
+      if (n > 0) lv[l] = { n, abs: '', moves: [] };
+    }
+    return lv;
+  }
+  // --- Mois : un mois absent hérite rythme, niveaux et effectifs du dernier mois saisi avant lui (rythme et niveaux : sinon du plus proche).
   function ensureMonth(s, mk) {
     if (s.months[mk]) return s.months[mk];
     const keys = Object.keys(s.months).sort();
-    const prev = keys.filter(k => k < mk).pop() || keys[0];
-    const p = prev ? s.months[prev] : { zone: 'A', rhythm: '4', levels: [] };
-    return (s.months[mk] = { zone: p.zone, rhythm: p.rhythm, levels: p.levels.slice(), days: null, off: [], lv: {} });
+    const before = keys.filter(k => k < mk).pop();
+    const p = s.months[before || keys[0]] || { rhythm: '4', levels: [], lv: {} };
+    return (s.months[mk] = { rhythm: p.rhythm, levels: p.levels.slice(), days: null, off: [], lv: before ? carry(s.months[before]) : {} });
   }
   // Mois affiché sans l'enregistrer : tant que rien n'est saisi, il suit les réglages du mois précédent.
   const viewMonth = (s, mk) => s.months[mk] || ensureMonth({ months: Object.assign({}, s.months) }, mk);
   const lvData = (m, l) => m.lv[l] || (m.lv[l] = { n: '', abs: '', moves: [] });
-  const num = v => typeof v === 'number' ? v : 0;
 
-  function autoOf(m, mk, opts) {
-    return Cal.autoDays(mk, m.zone, m.rhythm, Object.assign({ off: m.off.map(o => o.date) }, opts));
+  function autoOf(s, m, mk, opts) {
+    return Cal.autoDays(mk, s.zone, m.rhythm, Object.assign({ off: m.off.map(o => o.date) }, opts));
   }
-  const daysOf = (m, mk) => m.days === null ? autoOf(m, mk) : m.days;
+  const daysOf = (s, m, mk) => m.days === null ? autoOf(s, m, mk) : m.days;
 
   // Demi-journées d'inscription d'un élève arrivé (à partir du jour d'arrivée inclus) ou parti (jusqu'au départ)
-  function moveDJ(m, mk, mv) {
-    const D = daysOf(m, mk);
+  function moveDJ(s, m, mk, mv) {
+    const D = daysOf(s, m, mk);
     if (!mv.date) return D;
     const opts = mv.t === 'a' ? { from: mv.date } : { to: mv.date };
-    return Math.min(D, autoOf(m, mk, opts));
+    return Math.min(D, autoOf(s, m, mk, opts));
   }
 
   function compute(s, mk) {
-    const m = viewMonth(s, mk), D = daysOf(m, mk), rows = [];
+    const m = viewMonth(s, mk), D = daysOf(s, m, mk), rows = [];
     for (const l of LEVELS) {
       if (!m.levels.includes(l)) continue;
       const d = m.lv[l] || { n: '', abs: '', moves: [] };
-      const poss = num(d.n) * D + d.moves.reduce((a, mv) => a + moveDJ(m, mk, mv), 0);
+      const poss = num(d.n) * D + d.moves.reduce((a, mv) => a + moveDJ(s, m, mk, mv), 0);
       const abs = num(d.abs);
       rows.push({ l, eff: num(d.n) + d.moves.length, poss, abs, real: poss - abs, pct: poss ? abs / poss * 100 : 0 });
     }
     const sum = f => rows.reduce((a, r) => a + r[f], 0);
     const tot = { l: 'Classe', eff: sum('eff'), poss: sum('poss'), abs: sum('abs') };
     tot.real = tot.poss - tot.abs; tot.pct = tot.poss ? tot.abs / tot.poss * 100 : 0;
-    return { D, auto: autoOf(m, mk), manual: m.days !== null, rows, tot, month: m };
+    return { D, auto: autoOf(s, m, mk), manual: m.days !== null, rows, tot, month: m };
   }
 
   // Cumul de l'année : somme pondérée (présences possibles et absences additionnées), par mois et par niveau
@@ -117,7 +133,7 @@
       if (!s.months[mk]) continue;
       const c = compute(s, mk);
       if (!c.tot.poss) continue;
-      rows.push({ mk, D: c.D, poss: c.tot.poss, abs: c.tot.abs, pct: c.tot.pct });
+      rows.push({ mk, D: c.D, poss: c.tot.poss, abs: c.tot.abs, pct: c.tot.pct, byLevel: c.rows });
       all.poss += c.tot.poss; all.abs += c.tot.abs;
       for (const r of c.rows) {
         const b = byLevel[r.l] || (byLevel[r.l] = { l: r.l, poss: 0, abs: 0 });
@@ -128,6 +144,12 @@
     return { rows, levels: LEVELS.filter(l => byLevel[l]).map(l => pct(byLevel[l])), tot: pct(all) };
   }
 
-  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, mlabel, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul };
+  // Mois « fait » : au moins un niveau, et pour chacun un effectif et des absences saisis (0 compte)
+  function monthDone(s, mk) {
+    const m = s.months[mk];
+    return !!m && m.levels.length > 0 && m.levels.every(l => m.lv[l] && num(m.lv[l].n) > 0 && m.lv[l].abs !== '');
+  }
+
+  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, ZONES, mlabel, mshort, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul, monthDone };
   if (typeof module !== 'undefined') module.exports = api; else root.Core = api;
 })(this);

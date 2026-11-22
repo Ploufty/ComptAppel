@@ -7,7 +7,7 @@ const test = (name, fn) => { fn(); n++; };
 
 const months = {};
 for (const mk of ['2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-02', '2027-03', '2027-04', '2027-05', '2027-06', '2027-07']) {
-  months[mk] = { zone: 'A', rhythm: '4', levels: ['TPS', 'PS', 'MS', 'GS', 'ULIS'], days: null, off: [],
+  months[mk] = { rhythm: '4', levels: ['TPS', 'PS', 'MS', 'GS', 'ULIS'], days: null, off: [],
     lv: { TPS: { n: 2, abs: 1 }, PS: { n: 8, abs: 12 }, MS: { n: 9, abs: 7 }, GS: { n: 10, abs: 3 }, ULIS: { n: 1, abs: 0 } } };
 }
 months['2026-10'].off = [{ date: '2026-10-12', label: 'Grève – œuvre « Noël » … 5 €' }];

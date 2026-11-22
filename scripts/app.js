@@ -27,11 +27,12 @@
     $('year').hidden = C.YEARS.length < 2;
     $('month').innerHTML = ms.map(k => `<option value="${esc(k)}"${k === S.month ? ' selected' : ''}>${esc(C.mlabel(k))}</option>`).join('');
     $('prev').disabled = i <= 0; $('next').disabled = i >= ms.length - 1;
+    $('months').innerHTML = ms.map(k => `<button type="button" data-mk="${esc(k)}" aria-label="${esc(C.mlabel(k))}">${esc(C.mshort(k))}</button>`).join('');
     $('foot').textContent = `ComptAppel · Année scolaire ${S.year} · Saisie conservée dans ce navigateur`;
   }
   function calTxt() {
     const m = view(), c = C.compute(S, S.month), off = m.off.filter(o => o.date).length;
-    $('calTxt').textContent = `${Cal.zoneLabel(m.zone)} · ${m.rhythm === '4' ? '4 jours' : '4,5 jours'} · ${c.D} demi-journées de classe` +
+    $('calTxt').textContent = `${Cal.zoneLabel(S.zone)} · ${m.rhythm === '4' ? '4 jours' : '4,5 jours'} · ${c.D} demi-journées de classe` +
       (c.manual ? ' (modifié)' : '') + (off ? ` · ${off} jour${off > 1 ? 's' : ''} retiré${off > 1 ? 's' : ''}` : '');
   }
 
@@ -71,14 +72,18 @@
       row.title = bad ? 'Les absences dépassent les présences possibles : vérifiez la saisie.' : '';
     });
     calTxt();
+    monthsUI();
     const cu = C.cumul(S);
-    $('recap').innerHTML = '<tr><th scope="col">Mois</th><th scope="col">Demi-j.</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">% présents</th></tr>' +
-      (cu.rows.length ? cu.rows.map(r => `<tr><td>${esc(C.mlabel(r.mk))}</td><td>${r.D}</td><td>${r.poss}</td><td>${r.abs}</td><td>${C.fmt(100 - r.pct)} %</td></tr>`).join('') +
-        `<tr class="tot"><td>Année</td><td></td><td>${cu.tot.poss}</td><td>${cu.tot.abs}</td><td>${C.fmt(100 - cu.tot.pct)} %</td></tr>`
-        : '<tr><td colspan="5" class="empty">Les mois saisis apparaîtront ici.</td></tr>');
-    $('recapLv').hidden = cu.levels.length < 2;
-    $('recapLv').innerHTML = '<tr><th scope="col">Niveau (année)</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">% présents</th></tr>' +
-      cu.levels.map(r => `<tr><td>${esc(r.l)}</td><td>${r.poss}</td><td>${r.abs}</td><td>${r.poss ? C.fmt(100 - r.pct) : '–'} %</td></tr>`).join('');
+    // Cumul : % de présents par mois (classe entière et chaque niveau), puis totaux de l'année par niveau et pour la classe
+    const lvs = cu.levels.map(r => r.l), pc = (poss, abs) => poss ? C.fmt(100 - abs / poss * 100) + ' %' : '–';
+    $('recap').innerHTML = `<tr><th scope="col">Mois</th><th scope="col">Demi-j.</th><th scope="col">Classe entière</th>${lvs.map(l => `<th scope="col">${esc(l)}</th>`).join('')}</tr>` +
+      (cu.rows.length ? cu.rows.map(r => `<tr${C.monthDone(S, r.mk) ? ' class="done"' : ''}><td>${esc(C.mlabel(r.mk))}</td><td>${r.D}</td><td>${pc(r.poss, r.abs)}</td>${lvs.map(l => { const x = r.byLevel.find(y => y.l === l); return `<td>${x ? pc(x.poss, x.abs) : '–'}</td>`; }).join('')}</tr>`).join('') +
+        `<tr class="tot"><td>Année</td><td></td><td>${pc(cu.tot.poss, cu.tot.abs)}</td>${cu.levels.map(r => `<td>${pc(r.poss, r.abs)}</td>`).join('')}</tr>`
+        : `<tr><td colspan="${3 + lvs.length}" class="empty">Les mois saisis apparaîtront ici.</td></tr>`);
+    $('recapLv').hidden = !cu.rows.length;
+    $('recapLv').innerHTML = '<tr><th scope="col">Total de l\'année</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">Présences</th><th scope="col">% présents</th></tr>' +
+      cu.levels.map(r => `<tr><td>${esc(r.l)}</td><td>${r.poss}</td><td>${r.abs}</td><td>${r.poss - r.abs}</td><td>${pc(r.poss, r.abs)}</td></tr>`).join('') +
+      `<tr class="tot"><td>Classe entière</td><td>${cu.tot.poss}</td><td>${cu.tot.abs}</td><td>${cu.tot.poss - cu.tot.abs}</td><td>${pc(cu.tot.poss, cu.tot.abs)}</td></tr>`;
     clearTimeout(announceT);
     if (userTyped) announceT = setTimeout(() => { $('announce').textContent = ok ? `${C.mlabel(k)} : ${pres} % de présents.` : ''; }, 1000);
   }
@@ -158,7 +163,7 @@
     const m = view(), d = C.lvData(m, mvLevel);
     document.querySelectorAll('#mvList [data-dj]').forEach((sp, i) => {
       const mv = d.moves[i];
-      sp.textContent = mv.date ? `= ${C.moveDJ(m, S.month, mv)} demi-journées` : 'Sans date : mois complet.';
+      sp.textContent = mv.date ? `= ${C.moveDJ(S, m, S.month, mv)} demi-journées` : 'Sans date : mois complet.';
     });
   }
   $('mvAdd').onclick = () => { const d = C.lvData(own(), mvLevel); if (d.moves.length < C.MAX.moves) d.moves.push({ t: 'a', date: '' }); save(); mvUI(); rows(); results(); };
@@ -183,7 +188,7 @@
   }
   function calUI() {
     const m = view();
-    radios($('zone'), 'zone', Cal.zonesOf(S.year).map(z => [z, Cal.zoneLabel(z)]), m.zone);
+    radios($('zone'), 'zone', Cal.zonesOf(S.year).map(z => [z, Cal.zoneLabel(z)]), S.zone);
     radios($('rhythm'), 'rhythm', [['4', '4 jours'], ['4.5', '4,5 jours (mercredi matin)']], m.rhythm);
     $('offList').innerHTML = m.off.map((o, i) => `<div class="mv" data-o="${i}">
       <input type="date" data-ok="date" value="${esc(o.date)}" min="${S.month}-01" max="${S.month}-${Cal.daysInMonth(S.month)}" aria-label="Date du jour sans classe">
@@ -197,16 +202,16 @@
     if (document.activeElement !== $('days')) $('days').value = c.D;
     $('autoNote').textContent = c.manual ? `Calcul automatique : ${c.auto}.` : 'Calculé selon le mois, la zone et le rythme. Modifiable.';
     $('reset').hidden = !c.manual;
-    const off = m.off.filter(o => o.date), fer = Cal.feriesOf(S.month, m.zone);
+    const off = m.off.filter(o => o.date), fer = Cal.feriesOf(S.month, S.zone);
     $('offNote').textContent = [
       off.length ? `${off.length} jour${off.length > 1 ? 's' : ''} retiré${off.length > 1 ? 's' : ''} : ` + off.map(o => dfr(o.date) + (o.label ? ' (' + o.label + ')' : '')).join(', ') + '.' : '',
-      Cal.zonesOf(S.year).includes(m.zone) ? '' : 'Calendrier ' + m.zone + ' non communiqué pour cette année : zone A utilisée.',
+      Cal.zonesOf(S.year).includes(S.zone) ? '' : 'Calendrier ' + S.zone + ' non communiqué pour cette année : zone A utilisée.',
       fer.length ? 'Fériés : ' + fer.map(f => dfr(f.date) + ' (' + f.label + ')').join(', ') + '.' : ''
     ].filter(Boolean).join(' ');
   }
   const calUpdate = () => { save(); daysUI(); results(); };
   $('calBtn').onclick = () => { calUI(); $('dlgCal').showModal(); };
-  $('zone').onchange = e => { own().zone = e.target.value; calUpdate(); };
+  $('zone').onchange = e => { S.zone = C.ZONES.includes(e.target.value) ? e.target.value : S.zone; calUpdate(); };
   $('rhythm').onchange = e => { own().rhythm = e.target.value; calUpdate(); };
   function setDays(v) {
     const m = own(), n = clamp(v, C.MAX.days);
@@ -253,13 +258,26 @@
   $('dlgCal').addEventListener('close', () => { rows(); results(); });
   $('dlgMv').addEventListener('close', () => { rows(); results(); });
 
+  // Bandeau des mois : mois « fait » surligné (✓), mois affiché marqué
+  function monthsUI() {
+    document.querySelectorAll('#months button').forEach(b => {
+      const k = b.dataset.mk, done = C.monthDone(S, k);
+      b.classList.toggle('done', done);
+      b.setAttribute('aria-label', C.mlabel(k) + (done ? ', terminé' : ''));
+      if (k === S.month) { b.setAttribute('aria-current', 'true'); if (!b.dataset.seen) { b.dataset.seen = '1'; b.scrollIntoView({ inline: 'center', block: 'nearest' }); } } else b.removeAttribute('aria-current');
+    });
+  }
+  $('months').onclick = e => { const b = e.target.closest('[data-mk]'); if (b) goMonth(b.dataset.mk); };
+
   // --- Copie, fichiers, import
   $('copy').onclick = async () => {
     const { D, rows: rs, tot } = C.compute(S, S.month), m = view();
-    const line = r => `${r.l} : ${r.eff} élèves, ${r.poss} présences possibles, ${r.abs} absences, ${r.real} présences, ${r.poss ? C.fmt(100 - r.pct) : '–'} % de présents`;
+    // Texte brut : colonnes séparées par des tabulations (se colle tel quel dans un tableur ou un document)
+    const line = r => [r.l, r.eff, r.poss, r.abs, r.real, C.fmt(r.pct), r.poss ? C.fmt(100 - r.pct) : '–'].join('\t');
     const off = m.off.filter(o => o.date);
-    const txt = `${C.mlabel(S.month)} (${D} demi-journées de classe)\n` + rs.map(line).join('\n') + (rs.length > 1 ? '\n' + line(tot) : '') +
-      (off.length ? '\nJours sans classe retirés : ' + off.map(o => dfr(o.date) + (o.label ? ' (' + o.label + ')' : '')).join(', ') : '');
+    const txt = `${C.mlabel(S.month)} (${D} demi-journées de classe)\n` + ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'].join('\t') + '\n' +
+      rs.map(line).join('\n') + (rs.length > 1 ? '\n' + line(tot) : '') +
+      (off.length ? '\n\nJours sans classe retirés : ' + off.map(o => dfr(o.date) + (o.label ? ' (' + o.label + ')' : '')).join(', ') : '');
     try { await navigator.clipboard.writeText(txt); $('copied').textContent = 'Copié.'; }
     catch (e) { $('copied').textContent = 'Copie refusée : sélectionnez le tableau à la main.'; }
   };
