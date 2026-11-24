@@ -148,7 +148,7 @@ legend{font-weight:700;margin-bottom:10px;padding:0}
 .pill select{border:0;background:transparent;box-shadow:none;font-weight:700;font-size:1.05rem;text-align:center;text-align-last:center;min-height:46px;color:var(--fg);min-width:9.5em}
 .pill .icon-btn{border-radius:999px;padding:0 8px}
 .pill .icon-btn:disabled{opacity:.4;cursor:default}
-@media (max-width:760px){
+@media (max-width:1000px){
   .top{grid-template-columns:1fr auto}
   .top-m{grid-column:1/-1;order:3;flex-wrap:wrap}
 }
@@ -173,7 +173,7 @@ legend{font-weight:700;margin-bottom:10px;padding:0}
 .pane{background:var(--bg);border-radius:22px;box-shadow:var(--sh-out);border:var(--bw) solid var(--line);padding:18px;min-width:0}
 .pane-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
 .pane h2{margin:0;font:800 1.1rem var(--f)}
-@media (min-width:900px){
+@media (min-width:740px){
   .views.two{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}
 }
 
@@ -182,7 +182,7 @@ legend{font-weight:700;margin-bottom:10px;padding:0}
 .hmv{visibility:hidden}
 @media (min-width:520px){.lhead,.lrow{grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1fr) 4.6rem;gap:10px}.hmv{visibility:visible;line-height:1.15}}
 .lhead{font-size:.78rem;color:var(--muted);font-weight:700;text-align:center;margin-bottom:6px}
-.lpc+.lrow{margin-top:10px}
+.lpcrow+.lrow{margin-top:10px}
 .lpc{margin:5px 0 0;font-size:.85rem;color:var(--muted);text-align:left;font-variant-numeric:tabular-nums}
 .lpc.bad{color:var(--warn);font-weight:700}
 .sumline{margin:14px 0 0;font:800 1rem var(--f);color:var(--link)}
@@ -264,3 +264,36 @@ fieldset.danger legend{color:var(--warn);padding:0 6px}
 
 /* Crédit en bas des réglages */
 .credit{margin:0;text-align:center;font-size:.8rem;color:var(--muted)}
+
+/* Mobile et tablette */
+*{-webkit-tap-highlight-color:transparent}
+button,a,label,select,input,summary{touch-action:manipulation}
+body{overflow-x:hidden;overflow-x:clip;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+dialog{max-height:calc(100dvh - 32px)}
+.statbtn{min-width:44px}
+.statbtn:active{background:var(--soft)}
+.footer a{display:inline-block;padding:12px 6px}
+.lpcrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lpcrow .lpc{flex:1;min-width:0}
+.plusbtn{display:none}
+@media (hover:none){[data-tip]::after{display:none}}   /* pas de survol au doigt : les info-bulles sont masquées (l'aide les remplace) */
+@media (pointer:coarse){
+  .plusbtn{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;margin-top:4px;border-radius:50%;border:var(--bw) solid var(--edge);background:var(--bg);box-shadow:var(--sh-sm);color:var(--link);font:800 1.4rem var(--f);cursor:pointer}
+  .plusbtn:active{box-shadow:var(--sh-in)}
+  td .statbtn{min-height:44px}
+}
+/* Deux volets étroits (tablette en portrait, téléphone en paysage) : tableaux compacts */
+@media (min-width:740px) and (max-width:1000px){
+  .views.two .pane{padding:14px}
+  .views.two th,.views.two td{padding:8px 5px;font-size:.85rem}
+  .views.two th{white-space:normal;line-height:1.15;letter-spacing:.02em}
+  .views.two .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* Peu de hauteur (téléphone en paysage) : en-tête plus compact */
+@media (max-height:520px) and (orientation:landscape){
+  .top{padding-block:6px 2px}
+  .brand small{display:none}
+  .months{padding-block:4px 6px}
+  .tabs{margin:8px 0}
+  .bigpct{font-size:2.4rem}
+}

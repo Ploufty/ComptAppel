@@ -60,7 +60,7 @@
         <input class="num" type="number" min="0" max="${C.MAX.eleves}" step="1" inputmode="numeric" data-f="n" value="${esc(d.n)}" aria-label="${esc(l)} : élèves présents tout le mois">
         <input class="num" type="text" inputmode="numeric" autocomplete="off" data-f="abs" value="${esc(d.abs)}" aria-label="${esc(l)} : absences en demi-journées (un total ou une addition, par exemple 3+2+4)">
         <button type="button" class="icon-btn mvbtn" data-mv data-tip="Arrivée ou départ d'un élève en cours de mois" aria-label="${esc(l)} : arrivées et départs${n ? ' (' + n + ')' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg>${n ? `<span class="badge" aria-hidden="true">${n}</span>` : ''}</button>
-      </div><div class="lpc" data-pc="${esc(l)}"></div>`;
+      </div><div class="lpcrow"><div class="lpc" data-pc="${esc(l)}"></div><button type="button" class="plusbtn" data-plus="${esc(l)}" aria-label="Ajouter un plus dans les absences de ${esc(l)}">+</button></div>`;
     }).join('');
   }
 
@@ -116,7 +116,7 @@
   const refresh = () => { head(); rows(); results(); showTab(tab); };
 
   // --- Onglets : sur grand écran, Saisie et Résultat s'affichent ensemble
-  const wide = matchMedia('(min-width: 900px)');
+  const wide = matchMedia('(min-width: 740px)'); // tablette en portrait et téléphone en paysage : saisie et résultat côte à côte
   function showTab(t) {
     tab = t;
     const eff = wide.matches && t === 'resultat' ? 'saisie' : t;
@@ -173,6 +173,13 @@
     save(); results();
   };
   $('rows').onclick = e => {
+    const pl = e.target.closest('[data-plus]');
+    if (pl) { // tactile : le clavier numérique n'a pas toujours de « + » ; ce bouton l'ajoute aux absences
+      const inp = document.querySelector(`.lrow[data-l="${CSS.escape(pl.dataset.plus)}"] [data-f=abs]`), v = inp.value.trim();
+      if (v && !v.endsWith('+')) { inp.value = v + '+'; inp.dispatchEvent(new Event('input', { bubbles: true })); }
+      inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+      return;
+    }
     if (e.target.closest('[data-pick]')) return openLv();
     const b = e.target.closest('[data-mv]');
     if (b) { mvLevel = b.closest('.lrow').dataset.l; mvUI(); $('dlgMv').showModal(); }
