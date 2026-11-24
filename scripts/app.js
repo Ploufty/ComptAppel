@@ -16,6 +16,14 @@
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storeFail(); } }
 
   let S = C.normalize(readStore());
+  // Réglages de la classe (zone, rythme, niveaux) : mémorisés pour l'usager (préférences de l'appareil), communs à toutes les années et aux fichiers chargés.
+  function applyClassPrefs() {
+    if (C.ZONES.includes(P.zone)) S.zone = P.zone;
+    if (P.rhythm === '4' || P.rhythm === '4.5') S.rhythm = P.rhythm;
+    if (Array.isArray(P.levels)) S.levels = C.normLevels(P.levels);
+  }
+  applyClassPrefs();
+  const rememberClass = () => { P.zone = S.zone; P.rhythm = S.rhythm; P.levels = S.levels.slice(); savePrefs(); };
   const view = () => C.viewMonth(S, S.month);
   const own = () => C.ensureMonth(S, S.month);
   let mvLevel = null, tab = 'saisie';
@@ -32,13 +40,13 @@
   }
   function calTxt() {
     const m = view(), c = C.compute(S, S.month), off = m.off.filter(o => o.date).length;
-    $('calTxt').textContent = `${Cal.zoneLabel(S.zone)} · ${m.rhythm === '4' ? '4 jours' : '4,5 jours'} · ${c.D} demi-journées de classe` +
+    $('calTxt').textContent = `${Cal.zoneLabel(S.zone)} · ${S.rhythm === '4' ? '4 jours' : '4,5 jours'} · ${c.D} demi-journées de classe` +
       (c.manual ? ' (modifié)' : '') + (off ? ` · ${off} jour${off > 1 ? 's' : ''} retiré${off > 1 ? 's' : ''}` : '');
   }
 
   // --- Saisie : une ligne par niveau (construite quand les niveaux ou le mois changent ; jamais pendant la frappe)
   function rows() {
-    const m = view(), on = C.LEVELS.filter(l => m.levels.includes(l));
+    const m = view(), on = C.LEVELS.filter(l => S.levels.includes(l));
     $('rowsHint').hidden = !on.length;
     if (!on.length) {
       $('rows').innerHTML = '<div class="emptybox"><p>Choisissez les niveaux de la classe pour commencer.</p><button type="button" class="btn primary" data-pick>Choisir les niveaux</button></div>';
@@ -50,7 +58,7 @@
         <input class="num" type="number" min="0" max="${C.MAX.eleves}" step="1" inputmode="numeric" data-f="n" value="${esc(d.n)}" aria-label="${esc(l)} : élèves présents tout le mois">
         <input class="num" type="number" min="0" max="${C.MAX.abs}" step="1" inputmode="numeric" data-f="abs" value="${esc(d.abs)}" aria-label="${esc(l)} : absences en demi-journées">
         <button type="button" class="icon-btn mvbtn" data-mv data-tip="Arrivée ou départ d'un élève en cours de mois" aria-label="${esc(l)} : arrivées et départs${n ? ' (' + n + ')' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg>${n ? `<span class="badge" aria-hidden="true">${n}</span>` : ''}</button>
-      </div>`;
+      </div><div class="lpc" data-pc="${esc(l)}"></div>`;
     }).join('');
   }
 
@@ -62,10 +70,20 @@
     $('meter').style.width = ok ? (100 - tot.pct).toFixed(1) + '%' : '0';
     $('tabPct').textContent = ok ? pres + ' %' : '';
     $('resCap').textContent = rs.map(r => r.l).join(' ');
-    $('stats').innerHTML = [['Possible', tot.poss], ['Présent', tot.real], ['Absent', tot.abs], ['Demi-j.', D]].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+    $('stats').innerHTML = [['Possible', tot.poss], ['Présent', tot.real], ['Absent', tot.abs], ['Demi-j.', D]].map(([a, b]) => `<div><dt>${a}</dt><dd><button type="button" class="statbtn" data-calc aria-label="Voir le calcul : ${a} ${b}">${b}</button></dd></div>`).join('');
+    $('detailInline').hidden = P.detail !== true;
+    if (P.detail === true) $('detailInline').innerHTML = calcHtml(k);
     const tr = (r, c) => `<tr class="${c || ''}"><td>${esc(r.l)}</td><td>${r.poss}</td><td${r.abs > r.poss ? ' class="warn"' : ''}>${r.abs}</td><td>${r.poss ? C.fmt(100 - r.pct) : '–'} %</td></tr>`;
     $('res').innerHTML = '<tr><th scope="col">Niveau</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">% présents</th></tr>' +
       (rs.length ? rs.map(r => tr(r)).join('') + (rs.length > 1 ? tr(tot, 'tot') : '') : '<tr><td colspan="4" class="empty">Aucun niveau.</td></tr>');
+    document.querySelectorAll('.lpc').forEach(el => {
+      const r = rs.find(x => x.l === el.dataset.pc);
+      if (!r) return;
+      const bad = r.abs > r.poss;
+      el.classList.toggle('bad', bad);
+      el.textContent = bad ? 'Les absences dépassent les présences possibles : vérifiez la saisie.' : r.poss ? `${C.fmt(100 - r.pct)} % de présents` : 'Saisissez les élèves pour voir le pourcentage.';
+    });
+    $('saisieSum').textContent = ok ? `Classe entière : ${pres} % de présents` : '';
     document.querySelectorAll('.lrow').forEach(row => {
       const r = rs.find(x => x.l === row.dataset.l), bad = !!r && r.abs > r.poss;
       row.querySelectorAll('input').forEach(i => bad ? i.setAttribute('aria-invalid', 'true') : i.removeAttribute('aria-invalid'));
@@ -77,7 +95,7 @@
     // Cumul : % de présents par mois (classe entière et chaque niveau), puis totaux de l'année par niveau et pour la classe
     const lvs = cu.levels.map(r => r.l), pc = (poss, abs) => poss ? C.fmt(100 - abs / poss * 100) + ' %' : '–';
     $('recap').innerHTML = `<tr><th scope="col">Mois</th><th scope="col">Demi-j.</th><th scope="col">Classe entière</th>${lvs.map(l => `<th scope="col">${esc(l)}</th>`).join('')}</tr>` +
-      (cu.rows.length ? cu.rows.map(r => `<tr${C.monthDone(S, r.mk) ? ' class="done"' : ''}><td>${esc(C.mlabel(r.mk))}</td><td>${r.D}</td><td>${pc(r.poss, r.abs)}</td>${lvs.map(l => { const x = r.byLevel.find(y => y.l === l); return `<td>${x ? pc(x.poss, x.abs) : '–'}</td>`; }).join('')}</tr>`).join('') +
+      (cu.rows.length ? cu.rows.map(r => `<tr${C.monthDone(S, r.mk) ? ' class="done"' : ''}><td><button type="button" class="statbtn" data-calc="${esc(r.mk)}" aria-label="Voir le calcul de ${esc(C.mlabel(r.mk))}">${esc(C.mlabel(r.mk))}</button></td><td>${r.D}</td><td>${pc(r.poss, r.abs)}</td>${lvs.map(l => { const x = r.byLevel.find(y => y.l === l); return `<td>${x ? pc(x.poss, x.abs) : '–'}</td>`; }).join('')}</tr>`).join('') +
         `<tr class="tot"><td>Année</td><td></td><td>${pc(cu.tot.poss, cu.tot.abs)}</td>${cu.levels.map(r => `<td>${pc(r.poss, r.abs)}</td>`).join('')}</tr>`
         : `<tr><td colspan="${3 + lvs.length}" class="empty">Les mois saisis apparaîtront ici.</td></tr>`);
     $('recapLv').hidden = !cu.rows.length;
@@ -136,7 +154,7 @@
 
   // --- Fenêtre niveaux
   function lvUI() {
-    const m = view(), chip = l => `<label><input type="checkbox" value="${esc(l)}"${m.levels.includes(l) ? ' checked' : ''}><span>${esc(l)}</span></label>`;
+    const m = view(), chip = l => `<label><input type="checkbox" value="${esc(l)}"${S.levels.includes(l) ? ' checked' : ''}><span>${esc(l)}</span></label>`;
     $('levels').innerHTML = C.MAIN_LEVELS.map(chip).join('');
     $('extraBox').innerHTML = C.EXTRA_LEVELS.map(chip).join('');
   }
@@ -144,8 +162,8 @@
   $('lvBtn').onclick = openLv;
   $('dlgLv').onchange = () => {
     const on = new Set([...document.querySelectorAll('#dlgLv input:checked')].map(i => i.value));
-    own().levels = C.LEVELS.filter(l => on.has(l));
-    save(); rows(); results();
+    S.levels = C.LEVELS.filter(l => on.has(l));
+    rememberClass(); save(); rows(); results();
   };
 
   // --- Fenêtre arrivées / départs d'un niveau
@@ -189,7 +207,7 @@
   function calUI() {
     const m = view();
     radios($('zone'), 'zone', Cal.zonesOf(S.year).map(z => [z, Cal.zoneLabel(z)]), S.zone);
-    radios($('rhythm'), 'rhythm', [['4', '4 jours'], ['4.5', '4,5 jours (mercredi matin)']], m.rhythm);
+    radios($('rhythm'), 'rhythm', [['4', '4 jours'], ['4.5', '4,5 jours (mercredi matin)']], S.rhythm);
     $('offList').innerHTML = m.off.map((o, i) => `<div class="mv" data-o="${i}">
       <input type="date" data-ok="date" value="${esc(o.date)}" min="${S.month}-01" max="${S.month}-${Cal.daysInMonth(S.month)}" aria-label="Date du jour sans classe">
       <input type="text" data-ok="label" value="${esc(o.label)}" maxlength="${C.MAX.label}" placeholder="Motif (facultatif)" aria-label="Motif">
@@ -211,8 +229,8 @@
   }
   const calUpdate = () => { save(); daysUI(); results(); };
   $('calBtn').onclick = () => { calUI(); $('dlgCal').showModal(); };
-  $('zone').onchange = e => { S.zone = C.ZONES.includes(e.target.value) ? e.target.value : S.zone; calUpdate(); };
-  $('rhythm').onchange = e => { own().rhythm = e.target.value; calUpdate(); };
+  $('zone').onchange = e => { S.zone = C.ZONES.includes(e.target.value) ? e.target.value : S.zone; rememberClass(); calUpdate(); };
+  $('rhythm').onchange = e => { S.rhythm = e.target.value === '4.5' ? '4.5' : '4'; rememberClass(); calUpdate(); };
   function setDays(v) {
     const m = own(), n = clamp(v, C.MAX.days);
     m.days = n === '' ? null : n;
@@ -269,17 +287,47 @@
   }
   $('months').onclick = e => { const b = e.target.closest('[data-mk]'); if (b) goMonth(b.dataset.mk); };
 
+  // --- Détail du calcul (clic sur un chiffre, bouton, mois du cumul, ou option « Affichage » pour l'afficher sous le résultat)
+  const DOW = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+  function calcHtml(mk) {
+    const e = C.explain(S, mk), cls = e.days.filter(d => d.why === 'classe').length, mer = e.days.filter(d => d.why === 'mercredi' && d.dj).length;
+    const sum = e.days.reduce((a, d) => a + d.dj, 0), s2 = n => (n > 1 ? 's' : '');
+    let h = `<h3>1. Demi-journées de classe du mois : ${e.D}</h3>
+      <p>${esc(Cal.zoneLabel(e.zone))} (même zone toute l'année) · rythme ${e.rhythm === '4' ? '4 jours' : '4,5 jours'}. Un jour de classe compte 2 demi-journées (matin et après-midi) ; le mercredi compte ${e.rhythm === '4' ? '0 (rythme 4 jours)' : '1 (matin seulement)'}. Sont retirés : week-ends, vacances de la zone, jours fériés et jours sans classe saisis.</p>
+      <p class="calc-eq">${cls} jour${s2(cls)} de classe × 2${mer ? ` + ${mer} mercredi${s2(mer)} × 1` : ''} = ${sum} demi-journées${e.manual ? ` · total modifié à la main : ${e.D} au lieu de ${e.auto}` : ''}</p>
+      <div class="tw calc-days"><table><caption class="sr-only">Statut de chaque jour du mois</caption><tr><th scope="col">Jour</th><th scope="col">Statut</th><th scope="col">Demi-j.</th></tr>` +
+      e.days.map(d => `<tr class="${d.dj ? '' : 'off'}"><td>${DOW[d.dow]} ${+d.date.slice(8)}</td><td>${esc(d.label)}</td><td>${d.dj}</td></tr>`).join('') +
+      `<tr class="tot"><td>Total</td><td></td><td>${sum}</td></tr></table></div>
+      <h3>2. Présences possibles, absences et pourcentages</h3>`;
+    h += e.levels.length ? e.levels.map(l => {
+      const mv = l.moves.map(m => `${m.t === 'a' ? 'arrivée' : 'départ'}${m.date ? ' le ' + dfr(m.date) : ' (sans date : mois complet)'} : ${m.dj} demi-journées`);
+      return `<p><b>${esc(l.l)}</b> : ${l.n} élève${s2(l.n)} × ${e.D} demi-journées = ${l.n * e.D}${mv.length ? ' + ' + mv.join(' + ') : ''} = <b>${l.poss}</b> présences possibles.<br>
+        Absences : ${l.abs} → présences : ${l.real}. ${l.poss ? `% absents : ${l.abs} ÷ ${l.poss} = ${C.fmt(l.pct)} % ; <b>% présents : ${C.fmt(100 - l.pct)} %</b>.` : 'Saisissez les élèves pour voir les pourcentages.'}</p>`;
+    }).join('') : '<p>Aucun niveau coché.</p>';
+    if (e.levels.length) h += `<h3>3. Classe entière</h3><p>${e.tot.poss} présences possibles (somme des niveaux), ${e.tot.abs} absences, ${e.tot.real} présences : <b>${e.tot.poss ? C.fmt(100 - e.tot.pct) + ' % de présents' : '–'}</b>.</p>`;
+    return h.replace(/ %/g, '\u00a0%'); // pas de « % » seul en début de ligne
+  }
+  function openCalc(mk) {
+    $('calc-title').textContent = 'Détail du calcul · ' + C.mlabel(mk);
+    $('calcBody').innerHTML = calcHtml(mk);
+    $('dlgCalc').showModal();
+  }
+  $('stats').onclick = e => { if (e.target.closest('[data-calc]')) openCalc(S.month); };
+  $('calcBtn').onclick = () => openCalc(S.month);
+  $('recap').onclick = e => { const b = e.target.closest('[data-calc]'); if (b) openCalc(b.dataset.calc); };
+  $('calLink').onclick = () => { $('dlgCal').close(); openCalc(S.month); };
+
   // --- Copie, fichiers, import
   $('copy').onclick = async () => {
-    const { D, rows: rs, tot } = C.compute(S, S.month), m = view();
-    // Texte brut : colonnes séparées par des tabulations (se colle tel quel dans un tableur ou un document)
-    const line = r => [r.l, r.eff, r.poss, r.abs, r.real, C.fmt(r.pct), r.poss ? C.fmt(100 - r.pct) : '–'].join('\t');
-    const off = m.off.filter(o => o.date);
-    const txt = `${C.mlabel(S.month)} (${D} demi-journées de classe)\n` + ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'].join('\t') + '\n' +
-      rs.map(line).join('\n') + (rs.length > 1 ? '\n' + line(tot) : '') +
-      (off.length ? '\n\nJours sans classe retirés : ' + off.map(o => dfr(o.date) + (o.label ? ' (' + o.label + ')' : '')).join(', ') : '');
-    try { await navigator.clipboard.writeText(txt); $('copied').textContent = 'Copié.'; }
-    catch (e) { $('copied').textContent = 'Copie refusée : sélectionnez le tableau à la main.'; }
+    const { plain, html } = C.copyData(S, S.month), msg = t => { $('copied').textContent = t; };
+    try {
+      if (window.ClipboardItem) await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([plain], { type: 'text/plain' }), 'text/html': new Blob([html], { type: 'text/html' }) })]);
+      else await navigator.clipboard.writeText(plain);
+      msg('Copié : tableau sans mise en forme.');
+    } catch (e) {
+      try { await navigator.clipboard.writeText(plain); msg('Copié : tableau en texte.'); }
+      catch (e2) { msg('Copie refusée : sélectionnez le tableau à la main.'); }
+    }
   };
   let dl = null;
   try { window.claude.use('downloads').then(x => { dl = x; }).catch(() => {}); } catch (e) { /* hors artifact */ }
@@ -318,7 +366,7 @@
     }).catch(() => { $('fileMsg').textContent = 'Fichier non reconnu.'; });
   };
   const closeAsk = t => { pending = null; $('importAsk').hidden = true; $('fileMsg').textContent = t; $('loadBtn').focus(); };
-  $('importOk').onclick = () => { S = pending; save(); refresh(); closeAsk('Fichier chargé.'); };
+  $('importOk').onclick = () => { S = pending; applyClassPrefs(); save(); refresh(); closeAsk('Fichier chargé.'); };
   $('importNo').onclick = () => closeAsk('Chargement annulé.');
 
   // --- Affichage : thème, texte, animations, contraste (P, applyPrefs : scripts/prefs.js)
@@ -332,13 +380,14 @@
       if (r) r.checked = true;
     }
     dlg.querySelector('input[name=contrast]').checked = P.contrast === true;
+    dlg.querySelector('input[name=detail]').checked = P.detail === true;
   }
   $('help-open').onclick = () => $('help').showModal();
   $('settings-open').onclick = () => { syncDlg(); dlg.showModal(); };
   $('settings-close').onclick = $('settings-x').onclick = () => dlg.close();
   dlg.onclick = e => { if (e.target === dlg) dlg.close(); };
-  dlg.onchange = e => { const t = e.target; P[t.name] = t.type === 'checkbox' ? t.checked : t.value; if (P.text === '100') delete P.text; savePrefs(); };
-  $('prefs-reset').onclick = () => { P = {}; savePrefs(); syncDlg(); };
+  dlg.onchange = e => { const t = e.target; P[t.name] = t.type === 'checkbox' ? t.checked : t.value; if (P.text === '100') delete P.text; savePrefs(); if (t.name === 'detail') results(); };
+  $('prefs-reset').onclick = () => { P = { zone: P.zone, rhythm: P.rhythm, levels: P.levels }; savePrefs(); syncDlg(); }; // la réinitialisation de l'affichage garde les réglages de la classe
   $('theme-toggle').onclick = () => { P.theme = isDark() ? 'light' : 'dark'; savePrefs(); };
 
   document.querySelectorAll('.top .icon-btn[aria-label]').forEach(b => { b.title = b.getAttribute('aria-label'); });

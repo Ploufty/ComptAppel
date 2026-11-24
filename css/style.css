@@ -182,7 +182,11 @@ legend{font-weight:700;margin-bottom:10px;padding:0}
 .hmv{visibility:hidden}
 @media (min-width:520px){.lhead,.lrow{grid-template-columns:3.4rem minmax(0,1fr) minmax(0,1fr) 4.6rem;gap:10px}.hmv{visibility:visible;line-height:1.15}}
 .lhead{font-size:.78rem;color:var(--muted);font-weight:700;text-align:center;margin-bottom:6px}
-.lrow+.lrow{margin-top:10px}
+.lpc+.lrow{margin-top:10px}
+.lpc{margin:5px 0 0;font-size:.85rem;color:var(--muted);text-align:left;font-variant-numeric:tabular-nums}
+.lpc.bad{color:var(--warn);font-weight:700}
+.sumline{margin:14px 0 0;font:800 1rem var(--f);color:var(--link)}
+.sumline:empty{display:none}
 .lname{font:800 1.1rem var(--f)}
 .lrow input.num{width:100%;min-height:52px;padding-inline:4px;font-size:1.2rem;text-align:center;-moz-appearance:textfield;appearance:textfield}
 .lrow input.num::-webkit-inner-spin-button,.lrow input.num::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
@@ -227,3 +231,19 @@ dialog .seg,dialog .chips{justify-content:flex-start}
 .months button:focus-visible{outline:3px solid var(--link);outline-offset:2px}
 @media (min-width:900px){.months{justify-content:center;overflow-x:visible;flex-wrap:wrap}}
 tr.done td:first-child::after{content:" ✓";color:var(--link);font-weight:800}
+
+/* Détail du calcul */
+#dlgCalc{width:min(640px,calc(100% - 32px))}
+.calc{text-align:left}
+.calc h3{margin:14px 0 6px;font:800 1rem var(--f)}
+.calc p{margin:6px 0}
+.calc-eq{font-weight:700;font-variant-numeric:tabular-nums}
+.calc-days{max-height:38vh;overflow:auto;box-shadow:var(--sh-in);border-radius:14px;padding:4px 8px;margin:8px 0}
+.calc-days td:first-child,.calc-days th:first-child{text-align:left}
+.calc-days td:nth-child(2),.calc-days th:nth-child(2){text-align:left;white-space:normal}
+.calc-days tr.off td{color:var(--muted)}
+#detailInline{margin:14px 0;padding:14px;border-radius:18px;box-shadow:var(--sh-in)}
+.statbtn{font:inherit;color:inherit;background:none;border:0;padding:4px 6px;min-height:44px;cursor:pointer;text-decoration:underline dotted;text-underline-offset:4px;border-radius:8px}
+.statbtn:hover{text-decoration-style:solid}
+.statbtn:focus-visible{outline:3px solid var(--link);outline-offset:2px}
+td .statbtn{min-height:0;padding:2px 4px;text-align:left}

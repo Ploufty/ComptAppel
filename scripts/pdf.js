@@ -88,7 +88,7 @@
       need(30 + 16 + 8 + tableH(trows) + offLines.length * 12 + 4); // bloc du mois jamais coupé
       y -= 30; put(L, Core.mlabel(mk), 13, 1, 0, BLUE);
       put(R, `${D} demi-journées de classe${m.days !== null ? ' (saisie manuelle)' : ''}`, 9.5, 0, 1, GREY);
-      y -= 16; put(L, fit(`${Cal.zoneLabel(state.zone)} · ${zr(m)} · niveaux : ${rows.map(r => r.l).join(' ')}`, 9.5, 0, R - L), 9.5, 0, 0, GREY);
+      y -= 16; put(L, fit(`${Cal.zoneLabel(state.zone)} · ${zr(state)} · niveaux : ${rows.map(r => r.l).join(' ')}`, 9.5, 0, R - L), 9.5, 0, 0, GREY);
       y -= 8;
       table(BD, ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'], trows);
       offLines.forEach(t => { y -= 12; put(L, t, 9, 0, 0, GREY); });

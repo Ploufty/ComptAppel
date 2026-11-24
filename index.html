@@ -57,6 +57,7 @@
     <section class="pane" id="p-saisie" role="tabpanel" aria-labelledby="t-saisie">
       <div class="pane-head"><h2>Saisie du mois</h2><button type="button" class="btn" id="lvBtn" aria-haspopup="dialog">Niveaux</button></div>
       <div id="rows"></div>
+      <p class="sumline" id="saisieSum"></p>
       <p class="hint" id="rowsHint">Élèves présents tout le mois, absences en demi-journées (une journée entière = 2). Le bouton <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg> à droite d'une ligne sert à signaler l'arrivée ou le départ d'un élève en cours de mois. Entrée passe au champ suivant. Les élèves sont repris du mois précédent (arrivées et départs inclus) : modifiez-les si besoin.</p>
     </section>
 
@@ -66,7 +67,8 @@
       <div class="meter" aria-hidden="true"><span id="meter"></span></div>
       <dl class="stats" id="stats"></dl>
       <div class="tw"><table id="res"></table></div>
-      <div class="bar"><button type="button" class="btn primary" id="copy" data-tip="Copie le tableau du mois en texte brut, colonnes séparées par des tabulations : à coller dans un tableur ou un document.">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
+      <div id="detailInline" class="calc" hidden></div>
+      <div class="bar"><button type="button" class="btn" id="calcBtn" data-tip="Montre comment les demi-journées, les présences possibles et les pourcentages sont calculés, avec vos données.">Voir le détail du calcul</button><button type="button" class="btn primary" id="copy" data-tip="Copie le tableau du mois sans mise en forme : en texte aligné dans une zone de texte, en tableau simple dans un document ou un tableur.">Copier le résultat</button><span class="hint" id="copied" role="status"></span></div>
     </section>
 
     <section class="pane" id="p-annee" role="tabpanel" aria-labelledby="t-annee">
@@ -99,7 +101,7 @@
 <dialog id="dlgCal" aria-labelledby="cal-title">
   <div class="settings">
     <div class="settings-head"><h2 id="cal-title">Calendrier du mois</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <p class="hint">La zone est la même pour toute l'année. Rythme, total et jours sans classe sont propres à ce mois ; un nouveau mois reprend ceux du mois précédent.</p>
+    <p class="hint">Zone, rythme et niveaux sont les mêmes toute l'année et mémorisés pour vous. Le total et les jours sans classe sont propres à ce mois.</p>
     <fieldset><legend>Zone</legend><div class="seg" id="zone"></div></fieldset>
     <fieldset><legend>Rythme</legend><div class="seg" id="rhythm"></div></fieldset>
     <div class="fld"><label for="days">Demi-journées de classe</label>
@@ -107,6 +109,7 @@
       <span class="hint" id="autoNote"></span>
       <button type="button" class="btn ghost" id="reset" hidden>Remettre le calcul automatique</button>
     </div>
+    <button type="button" class="btn ghost" id="calLink">Voir comment les demi-journées sont comptées</button>
     <fieldset><legend>Jours sans classe</legend>
       <p class="hint">Grève, fermeture, pont, journée pédagogique… retirés du décompte.</p>
       <div id="offList"></div>
@@ -130,6 +133,7 @@
 <dialog id="dlgLv" aria-labelledby="lv-title">
   <div class="settings">
     <div class="settings-head"><h2 id="lv-title">Niveaux de la classe</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <p class="hint">Les niveaux sont les mêmes pour tous les mois et mémorisés pour vous. Décocher un niveau le retire de tous les mois ; ses saisies sont conservées et reviennent si vous le cochez de nouveau.</p>
     <fieldset><legend>Niveaux</legend><div class="chips" id="levels"></div></fieldset>
     <fieldset><legend>TPS et dispositifs</legend><div class="chips" id="extraBox"></div></fieldset>
     <div class="settings-foot"><span></span><button type="button" class="btn primary" data-close>Terminé</button></div>
@@ -153,6 +157,14 @@
   </div>
 </dialog>
 
+<dialog id="dlgCalc" aria-labelledby="calc-title">
+  <div class="settings calc">
+    <div class="settings-head"><h2 id="calc-title">Détail du calcul</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div id="calcBody"></div>
+    <div class="settings-foot"><span></span><button type="button" class="btn primary" data-close>Compris</button></div>
+  </div>
+</dialog>
+
 <dialog id="settings" aria-labelledby="settings-title">
   <div class="settings">
     <div class="settings-head">
@@ -172,6 +184,7 @@
       <label><input type="radio" name="motion" value="reduce"><span>Réduites</span></label>
       <label><input type="radio" name="motion" value="auto"><span>Système</span></label></div></fieldset>
     <label class="switch"><input type="checkbox" name="contrast"><span>Contraste renforcé</span></label>
+    <label class="switch"><input type="checkbox" name="detail"><span>Afficher le détail du calcul sous le résultat</span></label>
     <div class="settings-foot">
       <button type="button" class="btn ghost" id="prefs-reset">Réinitialiser</button>
       <button type="button" class="btn primary" id="settings-close">Fermer</button>

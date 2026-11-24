@@ -16,9 +16,10 @@ Puis ouvrez `http://localhost:8080/`. La saisie reste dans le navigateur ; enreg
 - Demi-journées de classe du mois : lundi à vendredi hors vacances de la zone et jours fériés ; mercredi = 1 demi-journée en rythme 4,5 jours, 0 en 4 jours. Les jours sans classe saisis (grève, fermeture…) sont retirés ; le total reste modifiable à la main.
 - Présences possibles = élèves × demi-journées + demi-journées d'inscription des élèves arrivés (à partir du jour d'arrivée inclus) ou partis (jusqu'au jour du départ inclus).
 - % absents = absences / possibles ; % présents = 100 − % absents. Cumul de l'année : somme des possibles et des absences de chaque mois.
-- La zone est commune à toute l'année. Chaque mois garde ses propres réglages (rythme, niveaux, total, jours sans classe).
+- Zone, rythme et niveaux sont communs à toute l'année et mémorisés pour l'usager (préférences de l'appareil) : ils restent après un rechargement, un changement d'année ou le chargement d'un fichier. Chaque mois garde son total manuel et ses jours sans classe. Décocher un niveau le retire de tous les mois ; ses saisies sont conservées.
 - Un nouveau mois reprend les niveaux et les effectifs du mois précédent (élèves + arrivées − départs), modifiables. Un mois est « fait » (surligné ✓) quand chaque niveau a ses élèves et ses absences saisis.
-- « Copier le résultat » produit un tableau en texte brut, colonnes séparées par des tabulations.
+- « Copier le résultat » copie un tableau sans mise en forme : texte aligné (zones de texte) et tableau simple (documents, tableurs, mails).
+- Le détail du calcul (statut de chaque jour du mois, demi-journées, présences possibles, absences, pourcentages) s'ouvre en cliquant sur un chiffre du résultat, sur « Voir le détail du calcul », sur un mois du cumul, ou s'affiche en permanence sous le résultat via l'option « Affichage ».
 - Le cumul de l'année donne le % de présents de la classe entière et de chaque niveau, par mois et en total.
 
 ## Calendriers

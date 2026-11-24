@@ -77,14 +77,23 @@
   const yearOf = mk => Object.keys(CALENDARS).find(y => schoolMonths(y).includes(mk));
 
   // Demi-journées d'un jour : 2 (lundi, mardi, jeudi, vendredi), mercredi 1 si rythme 4,5 jours, 0 sinon ; 0 hors classe.
-  function halfDays(year, date, zone, rhythm, ignoreFeries) {
+  // Statut d'un jour : { dj (demi-journées), why (classe | mercredi | weekend | ferie | vacances | hors), label }.
+  // Noms des vacances par rang : communes = Toussaint puis Noël ; zone = hiver puis printemps.
+  function dayInfo(year, date, zone, rhythm, ignoreFeries) {
     const c = CALENDARS[year];
     const w = new Date(date + 'T00:00:00Z').getUTCDay();
-    if (w === 0 || w === 6 || date < ((c.debutZone && c.debutZone[zone]) || c.debut) || date > c.fin) return 0;
-    if (!ignoreFeries && c.feries.some(f => f.date === date)) return 0;
-    if (c.communes.concat(c.zones[zone] || c.zones.A).some(([a, b]) => date >= a && date < b)) return 0;
-    return w === 3 ? (rhythm === '4.5' ? 1 : 0) : 2;
+    if (w === 0 || w === 6) return { dj: 0, why: 'weekend', label: 'Week-end' };
+    if (date < ((c.debutZone && c.debutZone[zone]) || c.debut)) return { dj: 0, why: 'hors', label: 'Avant la rentrée' };
+    if (date > c.fin) return { dj: 0, why: 'hors', label: "Après le départ en vacances d'été" };
+    const f = !ignoreFeries && c.feries.find(x => x.date === date);
+    if (f) return { dj: 0, why: 'ferie', label: f.label };
+    const NOMS = ['Toussaint', 'Noël', 'hiver', 'printemps'];
+    const hit = c.communes.concat(c.zones[zone] || c.zones.A).findIndex(([a, b]) => date >= a && date < b);
+    if (hit >= 0) return { dj: 0, why: 'vacances', label: 'Vacances de ' + (NOMS[hit] || '') };
+    if (w === 3) return rhythm === '4.5' ? { dj: 1, why: 'mercredi', label: 'Mercredi matin' } : { dj: 0, why: 'mercredi', label: 'Mercredi (rythme 4 jours)' };
+    return { dj: 2, why: 'classe', label: 'Classe' };
   }
+  const halfDays = (year, date, zone, rhythm, ignoreFeries) => dayInfo(year, date, zone, rhythm, ignoreFeries).dj;
 
   // Demi-journées de classe du mois. opts : from/to (bornes incluses, AAAA-MM-JJ), off (dates sans classe en plus).
   function autoDays(mk, zone, rhythm, opts) {
@@ -108,6 +117,6 @@
 
   const zonesOf = year => Object.keys(CALENDARS[year].zones);
   const zoneLabel = z => (z === 'Corse' ? 'Corse' : 'Zone ' + z);
-  const api = { CALENDARS, zonesOf, zoneLabel, schoolMonths, yearOf, halfDays, autoDays, feriesOf, daysInMonth };
+  const api = { CALENDARS, zonesOf, zoneLabel, schoolMonths, yearOf, dayInfo, halfDays, autoDays, feriesOf, daysInMonth };
   if (typeof module !== 'undefined') module.exports = api; else root.Calendrier = api;
 })(this);

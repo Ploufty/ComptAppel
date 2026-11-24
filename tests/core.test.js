@@ -3,7 +3,7 @@ const C = require('../scripts/core.js');
 let n = 0;
 const test = (name, fn) => { fn(); n++; };
 const TODAY = '2026-11-18';
-const S0 = { zone: 'A' };
+const S0 = { zone: 'A', rhythm: '4' };
 const month = (o) => Object.assign({ rhythm: '4', levels: [], days: null, off: [], lv: {} }, o);
 
 test('moveDJ arrivée : compté à partir du jour d’arrivée inclus', () => {
@@ -49,29 +49,29 @@ test('cumul pondéré (somme des possibles et des absences, pas moyenne des %)',
   assert.strictEqual(C.fmt(100 - cu.tot.pct), '90,65');
   assert.strictEqual(cu.levels[0].poss, 1144);
 });
-test('E : décocher GS en novembre ne change pas le cumul d’octobre', () => {
+test('niveaux et rythme communs : décocher un niveau le retire de tous les mois, ses saisies sont conservées', () => {
   const s = C.normalize(null, TODAY);
+  s.levels = ['MS', 'GS'];
   const oct = C.ensureMonth(s, '2026-10');
-  oct.levels = ['MS', 'GS'];
   Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 5 });
   Object.assign(C.lvData(oct, 'GS'), { n: 12, abs: 3 });
-  const before = JSON.stringify(C.cumul(s).rows);
-  const nov = C.ensureMonth(s, '2026-11');
-  assert.deepStrictEqual(nov.levels, ['MS', 'GS']); // hérité
-  nov.levels = nov.levels.filter(l => l !== 'GS');
-  nov.rhythm = '4.5';
-  assert.deepStrictEqual(oct.levels, ['MS', 'GS']);
-  assert.strictEqual(oct.rhythm, '4');
-  assert.strictEqual(JSON.stringify(C.cumul(s).rows.filter(r => r.mk === '2026-10')), before);
   assert.strictEqual(C.compute(s, '2026-10').tot.poss, 22 * 20);
+  assert.deepStrictEqual(Object.keys(C.ensureMonth(s, '2026-11').lv), ['MS', 'GS']); // effectifs repris
+  s.levels = ['MS']; // GS décoché
+  assert.strictEqual(C.compute(s, '2026-10').tot.poss, 10 * 20);
+  assert.strictEqual(C.cumul(s).levels.length, 1);
+  s.levels = ['MS', 'GS']; // recoché : les saisies sont toujours là
+  assert.strictEqual(C.compute(s, '2026-10').tot.poss, 22 * 20);
+  s.rhythm = '4.5'; // le rythme est commun à tous les mois
+  assert.ok(C.compute(s, '2026-10').D > 20 && C.compute(s, '2026-11').D > 34);
 });
-test('mois affiché mais non saisi : pas enregistré, hérite des réglages saisis ensuite', () => {
+test('mois affiché mais non saisi : pas enregistré', () => {
   const s = C.normalize(null, TODAY);
-  assert.deepStrictEqual(C.viewMonth(s, '2026-11').levels, []);
+  s.levels = ['CP'];
+  assert.deepStrictEqual(C.viewMonth(s, '2026-11').lv, {});
   assert.deepStrictEqual(Object.keys(s.months), []);
-  const sep = C.ensureMonth(s, '2026-09');
-  sep.levels = ['CP'];
-  assert.deepStrictEqual(C.viewMonth(s, '2026-11').levels, ['CP']);
+  Object.assign(C.lvData(C.ensureMonth(s, '2026-09'), 'CP'), { n: 7, abs: 0 });
+  assert.strictEqual(C.viewMonth(s, '2026-11').lv.CP.n, 7); // reprise de l'effectif
   assert.deepStrictEqual(Object.keys(s.months), ['2026-09']);
 });
 test('F : fichier piégé neutralisé', () => {
@@ -87,15 +87,15 @@ test('normalize : types faux, zone invalide, clés inconnues, dates hors mois', 
     '2026-11': { zone: 'Z', rhythm: 5, levels: ['MS', 'XX', '<b>'], days: '999', __proto__x: 1, off: [{ date: '2026-12-01' }, { date: '2026-11-31' }, { date: '2026-11-12', label: 'x'.repeat(500) }, 'a'],
       lv: { MS: { n: -4, abs: '2,5', moves: [{ t: 'zz', date: '2026-10-02' }, 7, { t: 'd', date: '2026-11-20' }] }, HACK: { n: 1 } } },
     '2031-01': { zone: 'A' }, 'toString': {} } }, TODAY);
-  assert.deepStrictEqual(Object.keys(s).sort(), ['month', 'months', 'version', 'year', 'zone']);
+  assert.deepStrictEqual(Object.keys(s).sort(), ['levels', 'month', 'months', 'rhythm', 'version', 'year', 'zone']);
   assert.strictEqual(s.zone, 'A'); // 'Z' invalide : repli sur A
   assert.strictEqual(s.year, '2026-2027');
   assert.strictEqual(s.month, '2026-11');
   assert.deepStrictEqual(Object.keys(s.months), ['2026-11']);
   const m = s.months['2026-11'];
-  assert.deepStrictEqual(Object.keys(m).sort(), ['days', 'levels', 'lv', 'off', 'rhythm']);
-  assert.strictEqual(m.rhythm, '4');
-  assert.deepStrictEqual(m.levels, ['MS']);
+  assert.deepStrictEqual(Object.keys(m).sort(), ['days', 'lv', 'off']);
+  assert.strictEqual(s.rhythm, '4');
+  assert.deepStrictEqual(s.levels, ['MS']); // anciens fichiers : niveaux repris des mois
   assert.strictEqual(m.days, 80);
   assert.deepStrictEqual(m.off.map(o => o.date), ['2026-11-12']);
   assert.strictEqual(m.off[0].label.length, C.MAX.label);
@@ -108,6 +108,8 @@ test('normalize : types faux, zone invalide, clés inconnues, dates hors mois', 
 test('G : normalize est stable (réappliqué sur sa propre sortie, même résultat)', () => {
   const s = C.normalize({ version: 3, year: '2026-2027', month: '2026-11', months: { '2026-10': { zone: 'B', rhythm: '4.5', levels: ['MS'], days: 15, off: [],
     lv: { MS: { n: 10, abs: 4, moves: [{ t: 'a', date: '2026-10-05' }, { t: 'd', date: '2026-10-09' }] } } } } }, TODAY);
+  assert.strictEqual(s.rhythm, '4.5'); // rythme et niveaux repris du mois (anciens fichiers)
+  assert.deepStrictEqual(s.levels, ['MS']);
   assert.strictEqual(s.zone, 'B'); // la zone est commune à l'année (reprise du premier mois qui en avait une)
   assert.strictEqual(s.months['2026-10'].days, 15);
   assert.deepStrictEqual(C.normalize(JSON.parse(JSON.stringify(s)), TODAY), s);
@@ -120,7 +122,7 @@ test('année par défaut selon la date du jour', () => {
 test('zone commune à l’année : changer la zone recalcule tous les mois', () => {
   const s = C.normalize(null, TODAY);
   const feb = C.ensureMonth(s, '2027-02');
-  feb.levels = ['MS']; Object.assign(C.lvData(feb, 'MS'), { n: 10, abs: 0 });
+  s.levels = ['MS']; Object.assign(C.lvData(feb, 'MS'), { n: 10, abs: 0 });
   assert.strictEqual(C.compute(s, '2027-02').D, 16); // zone A : vacances dès le 13
   s.zone = 'B';
   assert.strictEqual(C.compute(s, '2027-02').D, 24); // zone B : vacances dès le 20
@@ -130,7 +132,7 @@ test('zone commune à l’année : changer la zone recalcule tous les mois', () 
 test('effectif repris du mois précédent : élèves + arrivées − départs, absences et déplacements remis à zéro', () => {
   const s = C.normalize(null, TODAY);
   const oct = C.ensureMonth(s, '2026-10');
-  oct.levels = ['MS', 'GS'];
+  s.levels = ['MS', 'GS'];
   Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 4, moves: [{ t: 'a', date: '2026-10-05' }, { t: 'a', date: '' }, { t: 'd', date: '2026-10-20' }] });
   Object.assign(C.lvData(oct, 'GS'), { n: 8, abs: 1 });
   const nov = C.viewMonth(s, '2026-11');
@@ -147,7 +149,7 @@ test('mois « fait » : niveaux cochés, effectifs et absences saisis (0 compte)
   assert.strictEqual(C.monthDone(s, '2026-10'), false);
   const oct = C.ensureMonth(s, '2026-10');
   assert.strictEqual(C.monthDone(s, '2026-10'), false); // aucun niveau
-  oct.levels = ['MS', 'GS'];
+  s.levels = ['MS', 'GS'];
   Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 0 });
   assert.strictEqual(C.monthDone(s, '2026-10'), false); // GS manque
   Object.assign(C.lvData(oct, 'GS'), { n: 8, abs: '' });
@@ -158,11 +160,49 @@ test('mois « fait » : niveaux cochés, effectifs et absences saisis (0 compte)
 test('cumul : détail par niveau pour chaque mois, totaux par niveau et classe entière', () => {
   const s = C.normalize(null, TODAY);
   const oct = C.ensureMonth(s, '2026-10');
-  oct.levels = ['MS', 'GS'];
+  s.levels = ['MS', 'GS'];
   Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 4 }); Object.assign(C.lvData(oct, 'GS'), { n: 5, abs: 2 });
   const cu = C.cumul(s);
   assert.deepStrictEqual(cu.rows[0].byLevel.map(r => [r.l, r.poss, r.abs]), [['MS', 200, 4], ['GS', 100, 2]]);
   assert.deepStrictEqual(cu.levels.map(r => [r.l, r.poss, r.abs]), [['MS', 200, 4], ['GS', 100, 2]]);
   assert.deepStrictEqual([cu.tot.poss, cu.tot.abs], [300, 6]); // classe entière
+});
+test('copie : tableau sans mise en forme, texte aligné + table HTML nue, pourcentages présents et absents', () => {
+  const s = C.normalize(null, TODAY);
+  const oct = C.ensureMonth(s, '2026-10');
+  s.levels = ['MS', 'GS']; oct.off = [{ date: '2026-10-12', label: 'grève <b>' }];
+  Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 4 }); Object.assign(C.lvData(oct, 'GS'), { n: 5, abs: 2 });
+  const { plain, html } = C.copyData(s, '2026-10');
+  const lines = plain.split('\n');
+  assert.strictEqual(lines[0], 'Octobre 2026 (18 demi-journées de classe)');
+  assert.ok(/^Niveau +\| +Élèves \| +Possibles \| +Absences \| +Présences \| +% absents \| +% présents$/.test(lines[2]), lines[2]);
+  assert.ok(/^-+(-\+-+)+$/.test(lines[3]));
+  assert.ok(/^MS +\| +10 \| +180 \| +4 \| +176 \| +2,22 % \| +97,78 %$/.test(lines[4]), lines[4]);
+  assert.ok(lines[6].startsWith('Classe') && lines[6].endsWith('97,78 %'), lines[6]);
+  assert.strictEqual(new Set(lines.slice(2, 7).map(l => l.length)).size, 1); // colonnes alignées : même largeur partout
+  assert.ok(lines[8].startsWith('Jours sans classe retirés : 12/10 (grève <b>)'));
+  assert.ok(html.includes('<table><thead><tr><th>Niveau</th>') && !/style=|border=|class=/.test(html)); // aucune mise en forme
+  assert.ok(html.includes('grève &lt;b&gt;') && !html.includes('<b>'));
+});
+test('détail du calcul : statut de chaque jour, total, formule de chaque niveau', () => {
+  const s = C.normalize(null, TODAY);
+  s.levels = ['MS'];
+  const oct = C.ensureMonth(s, '2026-10');
+  oct.off = [{ date: '2026-10-12', label: 'grève' }];
+  Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 4, moves: [{ t: 'a', date: '2026-10-14' }] });
+  const e = C.explain(s, '2026-10');
+  assert.strictEqual(e.days.length, 31);
+  assert.strictEqual(e.days.reduce((a, d) => a + d.dj, 0), e.D); // la somme des jours = le total utilisé
+  assert.strictEqual(e.D, 18);
+  const by = d => e.days.find(x => x.date === '2026-10-' + d);
+  assert.deepStrictEqual([by('10').why, by('12').why, by('14').why, by('13').why, by('19').why], ['weekend', 'off', 'mercredi', 'classe', 'vacances']);
+  assert.strictEqual(by('19').label, 'Vacances de Toussaint');
+  assert.ok(by('12').label.includes('grève'));
+  assert.deepStrictEqual(e.levels[0].moves, [{ t: 'a', date: '2026-10-14', dj: 4 }]);
+  assert.strictEqual(e.levels[0].poss, 10 * 18 + 4); // élèves × demi-journées + arrivée
+  s.rhythm = '4.5';
+  assert.strictEqual(C.explain(s, '2026-10').days.find(x => x.date === '2026-10-14').dj, 1);
+  const feries = C.explain(C.normalize(null, TODAY), '2026-11').days.find(x => x.date === '2026-11-11');
+  assert.deepStrictEqual([feries.why, feries.label], ['ferie', 'Armistice']); // le férié est nommé même un mercredi
 });
 console.log(`core : ${n} tests OK`);

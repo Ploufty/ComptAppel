@@ -21,7 +21,7 @@
   }
   function fresh(today) {
     const year = defaultYear(today), ms = Cal.schoolMonths(year), cur = (today || new Date().toISOString()).slice(0, 7);
-    return { version: 3, year, zone: 'A', month: ms.includes(cur) ? cur : ms[0], months: {} };
+    return { version: 3, year, zone: 'A', rhythm: '4', levels: [], month: ms.includes(cur) ? cur : ms[0], months: {} };
   }
 
   // --- Normalisation : tout ce qui vient de localStorage ou d'un fichier passe par ici. Jamais d'exception.
@@ -36,8 +36,9 @@
   const dateIn = (v, mk) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && v.slice(0, 7) === mk &&
     +v.slice(8) >= 1 && +v.slice(8) <= Cal.daysInMonth(mk) ? v : '';
 
+  const normLevels = v => Array.isArray(v) ? LEVELS.filter(l => v.includes(l)) : [];
   function normMonth(m, mk) {
-    const lv = {}, levels = Array.isArray(m.levels) ? LEVELS.filter(l => m.levels.includes(l)) : [];
+    const lv = {};
     const src = isObj(m.lv) ? m.lv : {};
     for (const l of LEVELS) {
       if (!isObj(src[l])) continue;
@@ -53,10 +54,7 @@
       .map(x => ({ date: dateIn(x.date, mk), label: text(x.label) }))
       .filter(x => x.date && !seen.has(x.date) && seen.add(x.date)).slice(0, MAX.off);
     const days = int(m.days, MAX.days);
-    return {
-      rhythm: m.rhythm === '4.5' ? '4.5' : '4',
-      levels, days: days === '' ? null : days, off, lv
-    };
+    return { days: days === '' ? null : days, off, lv };
   }
 
   function normalize(raw, today) {
@@ -66,6 +64,10 @@
     // La zone est commune à toute l'année. Anciens fichiers : zone du premier mois qui en avait une.
     const old = isObj(r.months) ? Object.keys(r.months).sort().map(k => isObj(r.months[k]) && r.months[k].zone).find(z => ZONES.includes(z)) : null;
     s.zone = ZONES.includes(r.zone) ? r.zone : old || 'A';
+    // Réglages de la classe (rythme, niveaux) : communs à toute l'année. Anciens fichiers : repris des mois (premier rythme, union des niveaux).
+    const ms0 = isObj(r.months) ? Object.keys(r.months).sort().map(k => r.months[k]).filter(isObj) : [];
+    s.rhythm = r.rhythm === '4.5' || r.rhythm === '4' ? r.rhythm : (ms0.find(m => m.rhythm === '4.5' || m.rhythm === '4') || {}).rhythm || '4';
+    s.levels = normLevels(Array.isArray(r.levels) ? r.levels : [].concat(...ms0.map(m => Array.isArray(m.levels) ? m.levels : [])));
     const ms = Cal.schoolMonths(s.year);
     s.month = ms.includes(r.month) ? r.month : ms.includes(s.month) ? s.month : ms[0];
     if (isObj(r.months)) for (const mk of Object.keys(r.months)) {
@@ -76,9 +78,9 @@
 
   const num = v => typeof v === 'number' ? v : 0;
   // Effectif repris du mois précédent : élèves du mois + arrivées − départs (modifiable ensuite)
-  function carry(p) {
+  function carry(s, p) {
     const lv = {};
-    for (const l of p.levels) {
+    for (const l of s.levels) {
       const d = p.lv[l];
       if (!d) continue;
       const n = num(d.n) + d.moves.filter(x => x.t === 'a').length - d.moves.filter(x => x.t === 'd').length;
@@ -86,20 +88,18 @@
     }
     return lv;
   }
-  // --- Mois : un mois absent hérite rythme, niveaux et effectifs du dernier mois saisi avant lui (rythme et niveaux : sinon du plus proche).
+  // --- Mois : un mois absent reprend les effectifs du dernier mois saisi avant lui (niveaux, zone et rythme sont communs à l'année).
   function ensureMonth(s, mk) {
     if (s.months[mk]) return s.months[mk];
-    const keys = Object.keys(s.months).sort();
-    const before = keys.filter(k => k < mk).pop();
-    const p = s.months[before || keys[0]] || { rhythm: '4', levels: [], lv: {} };
-    return (s.months[mk] = { rhythm: p.rhythm, levels: p.levels.slice(), days: null, off: [], lv: before ? carry(s.months[before]) : {} });
+    const before = Object.keys(s.months).sort().filter(k => k < mk).pop();
+    return (s.months[mk] = { days: null, off: [], lv: before ? carry(s, s.months[before]) : {} });
   }
   // Mois affiché sans l'enregistrer : tant que rien n'est saisi, il suit les réglages du mois précédent.
-  const viewMonth = (s, mk) => s.months[mk] || ensureMonth({ months: Object.assign({}, s.months) }, mk);
+  const viewMonth = (s, mk) => s.months[mk] || ensureMonth(Object.assign({}, s, { months: Object.assign({}, s.months) }), mk);
   const lvData = (m, l) => m.lv[l] || (m.lv[l] = { n: '', abs: '', moves: [] });
 
   function autoOf(s, m, mk, opts) {
-    return Cal.autoDays(mk, s.zone, m.rhythm, Object.assign({ off: m.off.map(o => o.date) }, opts));
+    return Cal.autoDays(mk, s.zone, s.rhythm, Object.assign({ off: m.off.map(o => o.date) }, opts));
   }
   const daysOf = (s, m, mk) => m.days === null ? autoOf(s, m, mk) : m.days;
 
@@ -114,7 +114,7 @@
   function compute(s, mk) {
     const m = viewMonth(s, mk), D = daysOf(s, m, mk), rows = [];
     for (const l of LEVELS) {
-      if (!m.levels.includes(l)) continue;
+      if (!s.levels.includes(l)) continue;
       const d = m.lv[l] || { n: '', abs: '', moves: [] };
       const poss = num(d.n) * D + d.moves.reduce((a, mv) => a + moveDJ(s, m, mk, mv), 0);
       const abs = num(d.abs);
@@ -144,12 +144,50 @@
     return { rows, levels: LEVELS.filter(l => byLevel[l]).map(l => pct(byLevel[l])), tot: pct(all) };
   }
 
+
+
+  // Détail du calcul d'un mois : statut de chaque jour, total des demi-journées, puis formule de chaque niveau
+  function explain(s, mk) {
+    const c = compute(s, mk), m = c.month, year = Cal.yearOf(mk);
+    const off = new Map(m.off.filter(o => o.date).map(o => [o.date, o.label]));
+    const days = [];
+    for (let d = 1, n = Cal.daysInMonth(mk); d <= n; d++) {
+      const date = mk + '-' + String(d).padStart(2, '0');
+      let i = Cal.dayInfo(year, date, s.zone, s.rhythm);
+      if (i.dj > 0 && off.has(date)) i = { dj: 0, why: 'off', label: 'Jour sans classe' + (off.get(date) ? ' : ' + off.get(date) : '') };
+      days.push(Object.assign({ date, dow: new Date(date + 'T00:00:00Z').getUTCDay() }, i));
+    }
+    const levels = c.rows.map(r => {
+      const d = m.lv[r.l] || { n: '', abs: '', moves: [] };
+      return Object.assign({ n: num(d.n), moves: d.moves.map(mv => ({ t: mv.t, date: mv.date, dj: moveDJ(s, m, mk, mv) })) }, r);
+    });
+    return { mk, zone: s.zone, rhythm: s.rhythm, D: c.D, auto: c.auto, manual: c.manual, days, levels, tot: c.tot };
+  }
+
+  // Tableau du mois à copier, sans mise en forme : texte aligné (zone de texte) et <table> nue (document, tableur, mail)
+  const escH = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  function copyData(s, mk) {
+    const { D, rows, tot, month: m } = compute(s, mk);
+    const hdr = ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'];
+    const row = r => [r.l, r.eff, r.poss, r.abs, r.real, fmt(r.pct) + ' %', r.poss ? fmt(100 - r.pct) + ' %' : '–'];
+    const body = rows.map(row).concat(rows.length > 1 ? [row(tot)] : []);
+    const w = hdr.map((h, i) => Math.max(h.length, ...body.map(r => String(r[i]).length)));
+    const cell = (v, i) => i ? String(v).padStart(w[i]) : String(v).padEnd(w[i]);
+    const title = `${mlabel(mk)} (${D} demi-journées de classe)`;
+    const off = m.off.filter(o => o.date).map(o => o.date.slice(8) + '/' + o.date.slice(5, 7) + (o.label ? ' (' + o.label + ')' : ''));
+    const note = off.length ? 'Jours sans classe retirés : ' + off.join(', ') : '';
+    const plain = [title, '', hdr.map(cell).join(' | '), w.map(n => '-'.repeat(n)).join('-+-'), ...body.map(r => r.map(cell).join(' | '))].concat(note ? ['', note] : []).join('\n');
+    const tr = (cells, t) => '<tr>' + cells.map(c => `<${t}>${escH(c)}</${t}>`).join('') + '</tr>';
+    const html = `<p>${escH(title)}</p><table><thead>${tr(hdr, 'th')}</thead><tbody>${body.map(r => tr(r, 'td')).join('')}</tbody></table>` + (note ? `<p>${escH(note)}</p>` : '');
+    return { plain, html };
+  }
+
   // Mois « fait » : au moins un niveau, et pour chacun un effectif et des absences saisis (0 compte)
   function monthDone(s, mk) {
     const m = s.months[mk];
-    return !!m && m.levels.length > 0 && m.levels.every(l => m.lv[l] && num(m.lv[l].n) > 0 && m.lv[l].abs !== '');
+    return !!m && s.levels.length > 0 && s.levels.every(l => m.lv[l] && num(m.lv[l].n) > 0 && m.lv[l].abs !== '');
   }
 
-  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, ZONES, mlabel, mshort, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul, monthDone };
+  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, ZONES, normLevels, mlabel, mshort, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul, monthDone, copyData, explain };
   if (typeof module !== 'undefined') module.exports = api; else root.Core = api;
 })(this);

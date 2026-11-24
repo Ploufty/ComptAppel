@@ -11,7 +11,6 @@ for (const mk of ['2026-09', '2026-10', '2026-11', '2026-12', '2027-01', '2027-0
     lv: { TPS: { n: 2, abs: 1 }, PS: { n: 8, abs: 12 }, MS: { n: 9, abs: 7 }, GS: { n: 10, abs: 3 }, ULIS: { n: 1, abs: 0 } } };
 }
 months['2026-10'].off = [{ date: '2026-10-12', label: 'Grève – œuvre « Noël » … 5 €' }];
-months['2026-11'].levels = ['MS'];
 const s = C.normalize({ version: 3, year: '2026-2027', months }, '2026-11-18');
 const bytes = buildPdf(s, '18/11/2026');
 const pdf = Buffer.from(bytes).toString('latin1');
@@ -65,9 +64,10 @@ if (hasPdftotext) test('pdftotext : accents et contenu', () => {
   fs.writeFileSync(f, bytes);
   const txt = cp.execFileSync('pdftotext', ['-layout', f, '-']).toString('utf8');
   for (const w of ['Année scolaire 2026-2027', 'Élèves', 'Présences', '% présents', 'Février 2027', 'œuvre « Noël » … 5 €', "Cumul de l'année", 'ULIS', 'TPS', 'jour sans classe retiré']) assert.ok(txt.includes(w), w);
-  // un tableau par mois avec ses propres niveaux : novembre n'a que MS
+  // un tableau par mois, avec les mêmes niveaux toute l'année, et la ligne « Classe entière » dans les totaux
   const nov = txt.slice(txt.indexOf('Novembre 2026'), txt.indexOf('Décembre 2026'));
-  assert.ok(nov.includes('MS') && !nov.includes('ULIS'));
+  assert.ok(nov.includes('MS') && nov.includes('ULIS'));
+  assert.ok(txt.includes('Classe entière') && txt.includes('Zone A'));
 });
 else console.log('pdftotext absent : contrôle des accents ignoré');
 console.log(`pdf : ${n} tests OK`);
