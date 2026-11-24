@@ -13,7 +13,8 @@
     try { raw = localStorage.getItem(KEY); } catch (e) { storeFail(); return null; }
     try { return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storeFail(); } }
+  let undoSnap = null; // dernière remise à zéro, annulable tant que rien d'autre n'est modifié
+  function save() { undoSnap = null; $('resetUndo').hidden = true; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storeFail(); } }
 
   let S = C.normalize(readStore());
   // Réglages de la classe (zone, rythme, niveaux) : mémorisés pour l'usager (préférences de l'appareil), communs à toutes les années et aux fichiers chargés.
@@ -46,6 +47,7 @@
 
   // --- Saisie : une ligne par niveau (construite quand les niveaux ou le mois changent ; jamais pendant la frappe)
   function rows() {
+    exprErr.clear(); // une saisie d'addition non reconnue ne doit pas suivre d'un mois à l'autre
     const m = view(), on = C.LEVELS.filter(l => S.levels.includes(l));
     $('rowsHint').hidden = !on.length;
     if (!on.length) {
@@ -370,6 +372,7 @@
     $('saveState').textContent = !hasData ? "Aucune saisie à sauvegarder pour l'instant." : !when ? "Aucun fichier enregistré : enregistrez-en un pour garder une copie de sécurité." :
       dirty ? `Modifications depuis le dernier fichier (${when}) : pensez à enregistrer.` : `Dernier fichier enregistré le ${when} : tout est sauvegardé.`;
     const show = hasData && dirty && C.monthDone(S, S.month) && !nudgeOff.has(S.month);
+    $('resetSave').textContent = $('saveState').textContent;
     $('saveNudge').hidden = !show;
     if (show) $('nudgeTxt').textContent = `${C.mlabel(S.month)} est terminé. Enregistrez un fichier pour garder une copie de sécurité.`;
   }
@@ -437,7 +440,37 @@
   $('settings-open').onclick = () => { syncDlg(); dlg.showModal(); };
   $('settings-close').onclick = $('settings-x').onclick = () => dlg.close();
   dlg.onclick = e => { if (e.target === dlg) dlg.close(); };
-  dlg.onchange = e => { const t = e.target; P[t.name] = t.type === 'checkbox' ? t.checked : t.value; if (P.text === '100') delete P.text; savePrefs(); if (t.name === 'detail') results(); };
+  dlg.onchange = e => { const t = e.target; if (!['theme', 'text', 'motion', 'contrast', 'detail'].includes(t.name)) return; P[t.name] = t.type === 'checkbox' ? t.checked : t.value; if (P.text === '100') delete P.text; savePrefs(); if (t.name === 'detail') results(); };
+  // --- Remise à zéro (Affichage) : choix de ce qui est effacé, confirmation en tapant EFFACER, annulation possible
+  let scope = 'data';
+  const word = () => $('resetWord').value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+  const closeAskReset = () => { $('resetAsk').hidden = true; $('resetWord').value = ''; $('resetOk').disabled = true; };
+  document.querySelectorAll('input[name=resetScope]').forEach(r => { r.onchange = () => { scope = r.value; closeAskReset(); }; });
+  $('resetStart').onclick = () => {
+    const n = Object.keys(S.months).length;
+    $('resetTxt').textContent = scope === 'data' ? `Vous allez effacer toute la saisie (${n} mois). La zone, le rythme, les niveaux et l'affichage restent.`
+      : scope === 'class' ? "Vous allez remettre la zone (A), le rythme (4 jours) et les niveaux (aucun) à leur valeur de départ. La saisie est conservée mais n'apparaît que pour les niveaux cochés."
+      : `Vous allez tout effacer : ${n} mois de saisie, zone, rythme, niveaux, préférences d'affichage et état de sauvegarde. L'appli reviendra à son état de première ouverture.`;
+    $('resetAsk').hidden = false; $('resetMsg').textContent = ''; $('resetWord').value = ''; $('resetOk').disabled = true; $('resetWord').focus();
+  };
+  $('resetWord').oninput = () => { $('resetOk').disabled = word() !== 'EFFACER'; };
+  $('resetNo').onclick = closeAskReset;
+  $('resetSaveBtn').onclick = saveJson;
+  $('resetOk').onclick = () => {
+    if (word() !== 'EFFACER') return;
+    const snap = { S: JSON.parse(JSON.stringify(S)), P: JSON.parse(JSON.stringify(P)) };
+    if (scope === 'all') { S = C.normalize(null); P = {}; }
+    else if (scope === 'data') S.months = {};
+    else { S.zone = 'A'; S.rhythm = '4'; S.levels = []; delete P.zone; delete P.rhythm; delete P.levels; }
+    save(); savePrefs(); refresh(); syncDlg(); closeAskReset();
+    undoSnap = snap; $('resetUndo').hidden = false;
+    $('resetMsg').textContent = scope === 'data' ? 'Saisie effacée.' : scope === 'class' ? 'Réglages de la classe remis à zéro.' : 'Tout est remis à zéro.';
+  };
+  $('resetUndo').onclick = () => {
+    if (!undoSnap) return;
+    S = undoSnap.S; P = undoSnap.P; save(); savePrefs(); refresh(); syncDlg();
+    $('resetUndo').hidden = true; $('resetMsg').textContent = 'Remise à zéro annulée : tout est revenu.';
+  };
   $('prefs-reset').onclick = () => { P = { zone: P.zone, rhythm: P.rhythm, levels: P.levels }; savePrefs(); syncDlg(); }; // la réinitialisation de l'affichage garde les réglages de la classe
   $('theme-toggle').onclick = () => { P.theme = isDark() ? 'light' : 'dark'; savePrefs(); };
 

@@ -79,6 +79,7 @@
   // Demi-journées d'un jour : 2 (lundi, mardi, jeudi, vendredi), mercredi 1 si rythme 4,5 jours, 0 sinon ; 0 hors classe.
   // Statut d'un jour : { dj (demi-journées), why (classe | mercredi | weekend | ferie | vacances | hors), label }.
   // Noms des vacances par rang : communes = Toussaint puis Noël ; zone = hiver puis printemps.
+  const NOMS = ['Toussaint', 'Noël', 'hiver', 'printemps'];
   function dayInfo(year, date, zone, rhythm, ignoreFeries) {
     const c = CALENDARS[year];
     const w = new Date(date + 'T00:00:00Z').getUTCDay();
@@ -87,7 +88,6 @@
     if (date > c.fin) return { dj: 0, why: 'hors', label: "Après le départ en vacances d'été" };
     const f = !ignoreFeries && c.feries.find(x => x.date === date);
     if (f) return { dj: 0, why: 'ferie', label: f.label };
-    const NOMS = ['Toussaint', 'Noël', 'hiver', 'printemps'];
     const hit = c.communes.concat(c.zones[zone] || c.zones.A).findIndex(([a, b]) => date >= a && date < b);
     if (hit >= 0) return { dj: 0, why: 'vacances', label: 'Vacances de ' + (NOMS[hit] || '') };
     if (w === 3) return rhythm === '4.5' ? { dj: 1, why: 'mercredi', label: 'Mercredi matin' } : { dj: 0, why: 'mercredi', label: 'Mercredi (rythme 4 jours)' };

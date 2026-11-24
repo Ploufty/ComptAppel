@@ -180,6 +180,7 @@
       <li>Rien n'est envoyé sur internet : vos données restent <b>dans ce navigateur</b>. Si vous videz les données du navigateur ou changez d'ordinateur, elles disparaissent.</li>
       <li>Dans l'onglet Année, <b>« Enregistrer un fichier »</b> crée un fichier .json qui contient tout : la saisie de l'année, la zone, le rythme et les niveaux. Faites-le à la fin de chaque mois : un rappel s'affiche quand un mois est terminé.</li>
       <li><b>« Charger un fichier »</b> reprend tout, saisie et réglages, après confirmation. L'état de la dernière sauvegarde est indiqué dans l'onglet Année.</li>
+      <li><b>Remise à zéro</b> : dans « Affichage », rubrique « Données et remise à zéro ». Vous choisissez ce qui est effacé, puis vous confirmez en tapant EFFACER. Une remise à zéro peut être annulée tant que vous ne modifiez rien d'autre.</li>
     </ul>
     <div class="settings-foot"><span></span><button type="button" class="btn primary" data-close>Compris</button></div>
   </div>
@@ -213,8 +214,25 @@
       <label><input type="radio" name="motion" value="auto"><span>Système</span></label></div></fieldset>
     <label class="switch"><input type="checkbox" name="contrast"><span>Contraste renforcé</span></label>
     <label class="switch"><input type="checkbox" name="detail"><span>Afficher le détail du calcul sous le résultat</span></label>
+    <fieldset class="danger">
+      <legend>Données et remise à zéro</legend>
+      <p class="hint" id="resetSave"></p>
+      <div class="seg resetopts" role="radiogroup" aria-label="Que remettre à zéro ?">
+        <label><input type="radio" name="resetScope" value="data" checked><span>La saisie seulement (les réglages de la classe restent)</span></label>
+        <label><input type="radio" name="resetScope" value="class"><span>Les réglages de la classe seulement (zone, rythme, niveaux)</span></label>
+        <label><input type="radio" name="resetScope" value="all"><span>Tout : saisie, réglages de la classe et affichage</span></label>
+      </div>
+      <button type="button" class="btn" id="resetStart">Remettre à zéro…</button>
+      <div class="ask" id="resetAsk" hidden>
+        <p id="resetTxt"></p>
+        <div class="fld"><label for="resetWord">Pour confirmer, tapez EFFACER</label><input type="text" id="resetWord" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        <div class="bar"><button type="button" class="btn" id="resetSaveBtn">Enregistrer un fichier d'abord</button><button type="button" class="btn primary" id="resetOk" disabled>Remettre à zéro</button><button type="button" class="btn" id="resetNo">Annuler</button></div>
+      </div>
+      <p class="hint" id="resetMsg" role="status"></p>
+      <button type="button" class="btn" id="resetUndo" hidden>Annuler la remise à zéro</button>
+    </fieldset>
     <div class="settings-foot">
-      <button type="button" class="btn ghost" id="prefs-reset">Réinitialiser</button>
+      <button type="button" class="btn ghost" id="prefs-reset">Réinitialiser l'affichage</button>
       <button type="button" class="btn primary" id="settings-close">Fermer</button>
     </div>
   </div>
