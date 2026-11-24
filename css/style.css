@@ -208,6 +208,7 @@ legend{font-weight:700;margin-bottom:10px;padding:0}
 .big{text-align:center}
 .bigpct{font:800 clamp(2.8rem,9vw,3.8rem)/1 var(--f);color:var(--link);font-variant-numeric:tabular-nums}
 .bigcap{color:var(--muted);font-weight:600}
+.bigabs{color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;min-height:1.4em}
 .meter{height:14px;border-radius:999px;box-shadow:var(--sh-in);overflow:hidden;margin:14px 0}
 .meter span{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--c-blue),var(--c-lav));transition:width .3s}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(6rem,1fr));gap:10px;margin:0 0 16px}
