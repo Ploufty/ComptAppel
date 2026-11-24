@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>ComptAppel</title>
 <meta name="description" content="ComptAppel : saisie rapide des présences et absences du cahier d'appel, tout sur un écran.">
@@ -16,7 +16,7 @@
 
 <header class="top container">
   <div class="top-l">
-    <a class="icon-btn" href="../../index.html" aria-label="Retour à l'accueil Apps1D76"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg></a>
+    <a class="icon-btn" href="../../index.html" aria-label="Retour à l'accueil labERUN76"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg></a>
     <div class="brand"><b>Compt<span>Appel</span></b><small>Présences et absences du cahier d'appel</small></div>
   </div>
   <div class="top-m">
@@ -223,7 +223,7 @@
         <label><input type="radio" name="resetScope" value="all"><span>Tout : saisie, réglages de la classe et affichage</span></label>
       </div>
       <button type="button" class="btn" id="resetStart">Remettre à zéro…</button>
-      <div class="ask" id="resetAsk" hidden>
+      <div class="ask" id="resetAsk" role="alert" hidden>
         <p id="resetTxt"></p>
         <div class="fld"><label for="resetWord">Pour confirmer, tapez EFFACER</label><input type="text" id="resetWord" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
         <div class="bar"><button type="button" class="btn" id="resetSaveBtn">Enregistrer un fichier d'abord</button><button type="button" class="btn primary" id="resetOk" disabled>Remettre à zéro</button><button type="button" class="btn" id="resetNo">Annuler</button></div>
@@ -235,7 +235,7 @@
       <button type="button" class="btn ghost" id="prefs-reset">Réinitialiser l'affichage</button>
       <button type="button" class="btn primary" id="settings-close">Fermer</button>
     </div>
-    <p class="credit">ComptAppel · développé par Etienne Liaudet</p>
+    <p class="credit">ComptAppel v1.0.0 · développé par Etienne Liaudet</p>
   </div>
 </dialog>
 

@@ -1,0 +1,19 @@
+# GitLab (Forge) : tests à chaque envoi, puis publication sur GitLab Pages (branche par défaut uniquement).
+image: node:20-alpine
+
+stages: [test, deploy]
+
+tests:
+  stage: test
+  script:
+    - node --test tests/*.test.js
+
+pages:
+  stage: deploy
+  script:
+    - mkdir public
+    - cp -r index.html css scripts fonts public/
+  artifacts:
+    paths: [public]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

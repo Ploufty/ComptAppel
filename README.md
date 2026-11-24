@@ -42,13 +42,33 @@ scripts/calendar.js   Calendriers et calcul des demi-journées
 scripts/core.js       État, normalisation des données importées, calculs, cumul
 scripts/pdf.js        Génération du PDF (sans bibliothèque)
 scripts/app.js        Interface
-tests/                Contrôles : node --test tests/*.test.js
-outil.json            Fiche outil (intégration Apps1D76)
+tests/                Contrôles du cœur : node --test tests/*.test.js
+e2e/run.js            Contrôles dans un navigateur (saisie, sauvegarde, remise à zéro, mobile et tablette)
+.gitlab-ci.yml        GitLab : tests puis publication sur GitLab Pages
+outil.json            Fiche outil (intégration labERUN76)
 ```
 
-## Intégration dans Apps1D76
+## Intégration dans labERUN76
 
-Copier ce dépôt (sans `.git`) sous `Outils/comptappel/` (fiche `outil.json` incluse), puis `npm run generer`. L'icône maison de l'en-tête renvoie vers `../../index.html` (accueil) et le pied de page vers `../../accessibilite.html` : ces deux liens ne fonctionnent qu'une fois le dossier à cet emplacement.
+Copier ce dépôt (sans `.git`) sous `Outils/comptappel/` (fiche `outil.json` incluse), puis `npm run generer` dans labERUN76. L'icône maison de l'en-tête renvoie vers `../../index.html` (accueil) et le pied de page vers `../../accessibilite.html` : ces deux liens ne fonctionnent qu'une fois le dossier à cet emplacement.
+
+## Publication sur GitLab Pages
+
+Le fichier `.gitlab-ci.yml` lance les tests à chaque envoi, puis publie `index.html`, `css/`, `scripts/` et `fonts/` sur GitLab Pages (branche par défaut uniquement). Sur ce site autonome, l'icône maison et le lien « Accessibilité » renvoient vers `../../`, c'est-à-dire vers labERUN76 : ils ne fonctionnent que dans l'intégration ci-dessus.
+
+## Mobile et tablette
+
+- Téléphone en portrait : onglets Saisie, Résultat, Année. Tablette en portrait et téléphone en paysage (740 px et plus) : saisie et résultat côte à côte.
+- Cibles tactiles d'au moins 44 px, polices de champs d'au moins 16 px (pas de zoom automatique sur iPhone), pas de surbrillance au toucher, info-bulles masquées sans survol.
+- Un bouton « + » apparaît sous chaque niveau sur écran tactile : les claviers numériques n'ont pas toujours ce signe, nécessaire pour additionner les absences (3+2+4).
+- Contrôlé sur Chromium avec l'émulation de 9 appareils (iPhone SE, 14, 14 Pro Max, Pixel 7, iPad Mini, iPad Pro 11 et paysages). Les moteurs Safari (iOS) et Firefox ne sont pas couverts par ce contrôle.
+
+## Contrôle dans un navigateur
+
+```bash
+npm i --no-save playwright && npx playwright install chromium
+node e2e/run.js
+```
 
 ## Licence
 
