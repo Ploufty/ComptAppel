@@ -168,8 +168,8 @@
   const escH = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   function copyData(s, mk) {
     const { D, rows, tot, month: m } = compute(s, mk);
-    const hdr = ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'];
-    const row = r => [r.l, r.eff, r.poss, r.abs, r.real, fmt(r.pct) + ' %', r.poss ? fmt(100 - r.pct) + ' %' : '–'];
+    const hdr = ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% présents', '% absents'];
+    const row = r => [r.l, r.eff, r.poss, r.abs, r.real, r.poss ? fmt(100 - r.pct) + ' %' : '–', fmt(r.pct) + ' %'];
     const body = rows.map(row).concat(rows.length > 1 ? [row(tot)] : []);
     const w = hdr.map((h, i) => Math.max(h.length, ...body.map(r => String(r[i]).length)));
     const cell = (v, i) => i ? String(v).padStart(w[i]) : String(v).padEnd(w[i]);

@@ -80,8 +80,8 @@
     const BD = [40, 130, 193, 263, 333, 403, 479, 555];
     for (const { mk } of cum.rows) {
       const { D, rows, tot, month: m } = Core.compute(state, mk);
-      const trows = rows.map(r => ({ c: [r.l, r.eff, r.poss, r.abs, r.real, pc(r.pct), r.poss ? pc(100 - r.pct) : '–'] }));
-      if (rows.length > 1) trows.push({ b: 1, c: [tot.l, tot.eff, tot.poss, tot.abs, tot.real, pc(tot.pct), pc(100 - tot.pct)] });
+      const trows = rows.map(r => ({ c: [r.l, r.eff, r.poss, r.abs, r.real, r.poss ? pc(100 - r.pct) : '–', pc(r.pct)] }));
+      if (rows.length > 1) trows.push({ b: 1, c: [tot.l, tot.eff, tot.poss, tot.abs, tot.real, pc(100 - tot.pct), pc(tot.pct)] });
       const offTxt = m.off.length ? `${m.off.length} jour${m.off.length > 1 ? 's' : ''} sans classe retiré${m.off.length > 1 ? 's' : ''} : ` +
         m.off.map(o => dfr(o.date) + (o.label ? ' (' + o.label + ')' : '')).join(', ') : '';
       const offLines = offTxt ? wrap(offTxt, 9, 0, R - L) : [];
@@ -90,21 +90,21 @@
       put(R, `${D} demi-journées de classe${m.days !== null ? ' (saisie manuelle)' : ''}`, 9.5, 0, 1, GREY);
       y -= 16; put(L, fit(`${Cal.zoneLabel(state.zone)} · ${zr(state)} · niveaux : ${rows.map(r => r.l).join(' ')}`, 9.5, 0, R - L), 9.5, 0, 0, GREY);
       y -= 8;
-      table(BD, ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'], trows);
+      table(BD, ['Niveau', 'Élèves', 'Possibles', 'Absences', 'Présences', '% présents', '% absents'], trows);
       offLines.forEach(t => { y -= 12; put(L, t, 9, 0, 0, GREY); });
     }
 
-    const crows = cum.rows.map(r => ({ c: [Core.mlabel(r.mk), r.D, r.poss, r.abs, pc(r.pct), pc(100 - r.pct)] }));
-    crows.push({ b: 1, c: ['Année', '', cum.tot.poss, cum.tot.abs, pc(cum.tot.pct), pc(100 - cum.tot.pct)] });
+    const crows = cum.rows.map(r => ({ c: [Core.mlabel(r.mk), r.D, r.poss, r.abs, pc(100 - r.pct), pc(r.pct)] }));
+    crows.push({ b: 1, c: ['Année', '', cum.tot.poss, cum.tot.abs, pc(100 - cum.tot.pct), pc(cum.tot.pct)] });
     need(38 + tableH(crows));
     y -= 30; put(L, "Cumul de l'année", 13, 1, 0, BLUE); y -= 8;
-    table([40, 160, 235, 315, 395, 475, 555], ['Mois', 'Demi-j.', 'Possibles', 'Absences', '% absents', '% présents'], crows);
+    table([40, 160, 235, 315, 395, 475, 555], ['Mois', 'Demi-j.', 'Possibles', 'Absences', '% présents', '% absents'], crows);
     // Totaux de l'année : chaque niveau, puis la classe entière
-    const lrows = cum.levels.map(r => ({ c: [r.l, r.poss, r.abs, r.poss - r.abs, r.poss ? pc(r.pct) : '–', r.poss ? pc(100 - r.pct) : '–'] }));
-    lrows.push({ b: 1, c: ['Classe entière', cum.tot.poss, cum.tot.abs, cum.tot.poss - cum.tot.abs, pc(cum.tot.pct), pc(100 - cum.tot.pct)] });
+    const lrows = cum.levels.map(r => ({ c: [r.l, r.poss, r.abs, r.poss - r.abs, r.poss ? pc(100 - r.pct) : '–', r.poss ? pc(r.pct) : '–'] }));
+    lrows.push({ b: 1, c: ['Classe entière', cum.tot.poss, cum.tot.abs, cum.tot.poss - cum.tot.abs, pc(100 - cum.tot.pct), pc(cum.tot.pct)] });
     need(38 + tableH(lrows));
     y -= 30; put(L, "Totaux de l'année par niveau", 13, 1, 0, BLUE); y -= 8;
-    table([40, 160, 235, 315, 395, 475, 555], ['Niveau', 'Possibles', 'Absences', 'Présences', '% absents', '% présents'], lrows);
+    table([40, 160, 235, 315, 395, 475, 555], ['Niveau', 'Possibles', 'Absences', 'Présences', '% présents', '% absents'], lrows);
 
     pages.forEach((c, i) => {
       y = 28;

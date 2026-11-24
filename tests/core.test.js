@@ -175,10 +175,10 @@ test('copie : tableau sans mise en forme, texte aligné + table HTML nue, pource
   const { plain, html } = C.copyData(s, '2026-10');
   const lines = plain.split('\n');
   assert.strictEqual(lines[0], 'Octobre 2026 (18 demi-journées de classe)');
-  assert.ok(/^Niveau +\| +Élèves \| +Possibles \| +Absences \| +Présences \| +% absents \| +% présents$/.test(lines[2]), lines[2]);
+  assert.ok(/^Niveau +\| +Élèves \| +Possibles \| +Absences \| +Présences \| +% présents \| +% absents$/.test(lines[2]), lines[2]);
   assert.ok(/^-+(-\+-+)+$/.test(lines[3]));
-  assert.ok(/^MS +\| +10 \| +180 \| +4 \| +176 \| +2,22 % \| +97,78 %$/.test(lines[4]), lines[4]);
-  assert.ok(lines[6].startsWith('Classe') && lines[6].endsWith('97,78 %'), lines[6]);
+  assert.ok(/^MS +\| +10 \| +180 \| +4 \| +176 \| +97,78 % \| +2,22 %$/.test(lines[4]), lines[4]);
+  assert.ok(lines[6].startsWith('Classe') && lines[6].endsWith('2,22 %'), lines[6]);
   assert.strictEqual(new Set(lines.slice(2, 7).map(l => l.length)).size, 1); // colonnes alignées : même largeur partout
   assert.ok(lines[8].startsWith('Jours sans classe retirés : 12/10 (grève <b>)'));
   assert.ok(html.includes('<table><thead><tr><th>Niveau</th>') && !/style=|border=|class=/.test(html)); // aucune mise en forme

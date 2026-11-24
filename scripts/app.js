@@ -75,8 +75,8 @@
     $('stats').innerHTML = [['Possible', tot.poss], ['Présent', tot.real], ['Absent', tot.abs], ['Demi-j.', D]].map(([a, b]) => `<div><dt>${a}</dt><dd><button type="button" class="statbtn" data-calc aria-label="Voir le calcul : ${a} ${b}">${b}</button></dd></div>`).join('');
     $('detailInline').hidden = P.detail !== true;
     if (P.detail === true) $('detailInline').innerHTML = calcHtml(k);
-    const tr = (r, c) => `<tr class="${c || ''}"><td>${esc(r.l)}</td><td>${r.poss}</td><td${r.abs > r.poss ? ' class="warn"' : ''}>${r.abs}</td><td>${r.poss ? C.fmt(r.pct) : '–'} %</td><td>${r.poss ? C.fmt(100 - r.pct) : '–'} %</td></tr>`;
-    $('res').innerHTML = '<tr><th scope="col">Niveau</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">% absents</th><th scope="col">% présents</th></tr>' +
+    const tr = (r, c) => `<tr class="${c || ''}"><td>${esc(r.l)}</td><td>${r.poss}</td><td${r.abs > r.poss ? ' class="warn"' : ''}>${r.abs}</td><td>${r.poss ? C.fmt(100 - r.pct) : '–'} %</td><td>${r.poss ? C.fmt(r.pct) : '–'} %</td></tr>`;
+    $('res').innerHTML = '<tr><th scope="col">Niveau</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">% présents</th><th scope="col">% absents</th></tr>' +
       (rs.length ? rs.map(r => tr(r)).join('') + (rs.length > 1 ? tr(tot, 'tot') : '') : '<tr><td colspan="4" class="empty">Aucun niveau.</td></tr>');
     document.querySelectorAll('.lpc').forEach(el => {
       const r = rs.find(x => x.l === el.dataset.pc);
@@ -101,9 +101,9 @@
         `<tr class="tot"><td>Année</td><td></td><td>${pc(cu.tot.poss, cu.tot.abs)}</td>${cu.levels.map(r => `<td>${pc(r.poss, r.abs)}</td>`).join('')}</tr>`
         : `<tr><td colspan="${3 + lvs.length}" class="empty">Les mois saisis apparaîtront ici.</td></tr>`);
     $('recapLv').hidden = !cu.rows.length;
-    $('recapLv').innerHTML = '<tr><th scope="col">Total de l\'année</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">Présences</th><th scope="col">% absents</th><th scope="col">% présents</th></tr>' +
-      cu.levels.map(r => `<tr><td>${esc(r.l)}</td><td>${r.poss}</td><td>${r.abs}</td><td>${r.poss - r.abs}</td><td>${r.poss ? C.fmt(r.pct) + ' %' : '–'}</td><td>${pc(r.poss, r.abs)}</td></tr>`).join('') +
-      `<tr class="tot"><td>Classe entière</td><td>${cu.tot.poss}</td><td>${cu.tot.abs}</td><td>${cu.tot.poss - cu.tot.abs}</td><td>${cu.tot.poss ? C.fmt(cu.tot.pct) + ' %' : '–'}</td><td>${pc(cu.tot.poss, cu.tot.abs)}</td></tr>`;
+    $('recapLv').innerHTML = '<tr><th scope="col">Total de l\'année</th><th scope="col">Possibles</th><th scope="col">Absences</th><th scope="col">Présences</th><th scope="col">% présents</th><th scope="col">% absents</th></tr>' +
+      cu.levels.map(r => `<tr><td>${esc(r.l)}</td><td>${r.poss}</td><td>${r.abs}</td><td>${r.poss - r.abs}</td><td>${pc(r.poss, r.abs)}</td><td>${r.poss ? C.fmt(r.pct) + ' %' : '–'}</td></tr>`).join('') +
+      `<tr class="tot"><td>Classe entière</td><td>${cu.tot.poss}</td><td>${cu.tot.abs}</td><td>${cu.tot.poss - cu.tot.abs}</td><td>${pc(cu.tot.poss, cu.tot.abs)}</td><td>${cu.tot.poss ? C.fmt(cu.tot.pct) + ' %' : '–'}</td></tr>`;
     clearTimeout(announceT);
     if (userTyped) announceT = setTimeout(() => { $('announce').textContent = ok ? `${C.mlabel(k)} : ${pres} % de présents.` : ''; }, 1000);
   }
@@ -304,7 +304,7 @@
     h += e.levels.length ? e.levels.map(l => {
       const mv = l.moves.map(m => `${m.t === 'a' ? 'arrivée' : 'départ'}${m.date ? ' le ' + dfr(m.date) : ' (sans date : mois complet)'} : ${m.dj} demi-journées`);
       return `<p><b>${esc(l.l)}</b> : ${l.n} élève${s2(l.n)} × ${e.D} demi-journées = ${l.n * e.D}${mv.length ? ' + ' + mv.join(' + ') : ''} = <b>${l.poss}</b> présences possibles.<br>
-        Absences : ${l.abs} → présences : ${l.real}. ${l.poss ? `% absents : ${l.abs} ÷ ${l.poss} = ${C.fmt(l.pct)} % ; <b>% présents : ${C.fmt(100 - l.pct)} %</b>.` : 'Saisissez les élèves pour voir les pourcentages.'}</p>`;
+        Absences : ${l.abs} → présences : ${l.real}. ${l.poss ? `<b>% présents : ${l.real} ÷ ${l.poss} = ${C.fmt(100 - l.pct)} %</b> ; % absents : ${l.abs} ÷ ${l.poss} = ${C.fmt(l.pct)} %.` : 'Saisissez les élèves pour voir les pourcentages.'}</p>`;
     }).join('') : '<p>Aucun niveau coché.</p>';
     if (e.levels.length) h += `<h3>3. Classe entière</h3><p>${e.tot.poss} présences possibles (somme des niveaux), ${e.tot.abs} absences, ${e.tot.real} présences : <b>${e.tot.poss ? C.fmt(100 - e.tot.pct) + ' % de présents' : '–'}</b>.</p>`;
     return h.replace(/ %/g, '\u00a0%'); // pas de « % » seul en début de ligne
