@@ -56,13 +56,14 @@
       const d = C.lvData(m, l), n = d.moves.length;
       return `<div class="lrow" role="group" aria-label="${esc(l)}" data-l="${esc(l)}"><b class="lname">${esc(l)}</b>
         <input class="num" type="number" min="0" max="${C.MAX.eleves}" step="1" inputmode="numeric" data-f="n" value="${esc(d.n)}" aria-label="${esc(l)} : élèves présents tout le mois">
-        <input class="num" type="number" min="0" max="${C.MAX.abs}" step="1" inputmode="numeric" data-f="abs" value="${esc(d.abs)}" aria-label="${esc(l)} : absences en demi-journées">
+        <input class="num" type="text" inputmode="numeric" autocomplete="off" data-f="abs" value="${esc(d.abs)}" aria-label="${esc(l)} : absences en demi-journées (un total ou une addition, par exemple 3+2+4)">
         <button type="button" class="icon-btn mvbtn" data-mv data-tip="Arrivée ou départ d'un élève en cours de mois" aria-label="${esc(l)} : arrivées et départs${n ? ' (' + n + ')' : ''}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg>${n ? `<span class="badge" aria-hidden="true">${n}</span>` : ''}</button>
       </div><div class="lpc" data-pc="${esc(l)}"></div>`;
     }).join('');
   }
 
   // --- Résultat (met à jour sans toucher aux champs de saisie)
+  const num = v => typeof v === 'number' ? v : 0, exprErr = new Set();
   let announceT = null;
   function results() {
     const k = S.month, { D, rows: rs, tot } = C.compute(S, k), ok = rs.length && tot.poss, pres = ok ? C.fmt(100 - tot.pct) : '–';
@@ -82,9 +83,10 @@
       const r = rs.find(x => x.l === el.dataset.pc);
       if (!r) return;
       const bad = r.abs > r.poss;
-      el.classList.toggle('bad', bad);
-      el.textContent = bad ? 'Les absences dépassent les présences possibles : vérifiez la saisie.' : r.poss ? `${C.fmt(100 - r.pct)}\u00a0% de présents · ${C.fmt(r.pct)}\u00a0% d'absents` : 'Saisissez les élèves pour voir le pourcentage.';
+      el.classList.toggle('bad', bad || exprErr.has(el.dataset.pc));
+      el.textContent = exprErr.has(el.dataset.pc) ? 'Saisie non reconnue : chiffres et « + » seulement (par exemple 3+2+4).' : bad ? 'Les absences dépassent les présences possibles : vérifiez la saisie.' : r.poss ? `${C.fmt(100 - r.pct)}\u00a0% de présents · ${C.fmt(r.pct)}\u00a0% d'absents` : 'Saisissez les élèves pour voir le pourcentage.';
     });
+    $('zeroAbs').hidden = !S.levels.some(l => { const d = view().lv[l]; return d && num(d.n) > 0 && d.abs === ''; });
     $('saisieSum').textContent = ok ? `Classe entière : ${pres}\u00a0% de présents · ${abs}\u00a0% d'absents` : '';
     document.querySelectorAll('.lrow').forEach(row => {
       const r = rs.find(x => x.l === row.dataset.l), bad = !!r && r.abs > r.poss;
@@ -93,6 +95,7 @@
     });
     calTxt();
     monthsUI();
+    saveUI();
     const cu = C.cumul(S);
     // Cumul : % de présents par mois (classe entière et chaque niveau), puis totaux de l'année par niveau et pour la classe
     const lvs = cu.levels.map(r => r.l), pc = (poss, abs) => poss ? C.fmt(100 - abs / poss * 100) + ' %' : '–';
@@ -145,8 +148,27 @@
   $('rows').oninput = e => {
     const t = e.target, row = t.closest('.lrow');
     if (!row || !t.dataset.f) return;
-    C.lvData(own(), row.dataset.l)[t.dataset.f] = clamp(t.value, t.dataset.f === 'n' ? C.MAX.eleves : C.MAX.abs);
+    const l = row.dataset.l;
+    if (t.dataset.f === 'abs') { // total ou addition (3+2+4) ; saisie non reconnue : on garde la valeur précédente et on le signale
+      const v = C.sumExpr(t.value);
+      if (v === null) { exprErr.add(l); results(); return; }
+      exprErr.delete(l);
+      C.lvData(own(), l).abs = v === '' ? '' : Math.min(C.MAX.abs, v);
+    } else C.lvData(own(), l)[t.dataset.f] = clamp(t.value, C.MAX.eleves);
     userTyped = true; save(); results();
+  };
+  $('rows').onchange = e => { // à la sortie du champ, on affiche le total retenu
+    const t = e.target, row = t.closest('.lrow');
+    if (!row || t.dataset.f !== 'abs') return;
+    exprErr.delete(row.dataset.l);
+    t.value = String(C.lvData(view(), row.dataset.l).abs);
+    results();
+  };
+  $('zeroAbs').onclick = () => {
+    const m = own();
+    for (const l of S.levels) { const d = C.lvData(m, l); if (num(d.n) > 0 && d.abs === '') d.abs = 0; }
+    document.querySelectorAll('.lrow').forEach(r => { r.querySelector('[data-f=abs]').value = String(C.lvData(m, r.dataset.l).abs); });
+    save(); results();
   };
   $('rows').onclick = e => {
     if (e.target.closest('[data-pick]')) return openLv();
@@ -210,11 +232,9 @@
     const m = view();
     radios($('zone'), 'zone', Cal.zonesOf(S.year).map(z => [z, Cal.zoneLabel(z)]), S.zone);
     radios($('rhythm'), 'rhythm', [['4', '4 jours'], ['4.5', '4,5 jours (mercredi matin)']], S.rhythm);
-    $('offList').innerHTML = m.off.map((o, i) => `<div class="mv" data-o="${i}">
-      <input type="date" data-ok="date" value="${esc(o.date)}" min="${S.month}-01" max="${S.month}-${Cal.daysInMonth(S.month)}" aria-label="Date du jour sans classe">
-      <input type="text" data-ok="label" value="${esc(o.label)}" maxlength="${C.MAX.label}" placeholder="Motif (facultatif)" aria-label="Motif">
-      <button type="button" class="btn ghost" data-odel="${i}">Retirer</button>
-      <span class="hint bad" data-oerr hidden>Date hors du mois.</span></div>`).join('');
+    const gr = C.groupOff(m.off);
+    $('offList').innerHTML = gr.length ? gr.map(g => `<div class="mv"><span>${esc(g.from === g.to ? dfr(g.from) : dfr(g.from) + ' au ' + dfr(g.to))}${g.label ? ' · ' + esc(g.label) : ''}</span><button type="button" class="btn ghost" data-odel="${esc(g.from)}">Retirer</button></div>`).join('') : '<p class="hint">Aucun jour sans classe ce mois.</p>';
+    ['offFrom', 'offTo'].forEach(id => { $(id).min = S.month + '-01'; $(id).max = S.month + '-' + Cal.daysInMonth(S.month); });
     daysUI();
   }
   function daysUI() {
@@ -245,29 +265,22 @@
   $('dp').onclick = () => { $('days').value = Math.min(C.MAX.days, (+$('days').value || 0) + 1); setDays($('days').value); };
   $('reset').onclick = () => { own().days = null; calUpdate(); };
   $('offAdd').onclick = () => {
-    const m = own();
-    if (m.off.length >= C.MAX.off) return;
-    m.off.push({ date: '', label: '' });
-    calUI();
-    $('offList').lastElementChild.querySelector('input').focus();
-  };
-  $('offList').oninput = e => {
-    const t = e.target, row = t.closest('[data-o]');
-    if (!row) return;
-    const o = own().off[+row.dataset.o];
-    if (t.dataset.ok === 'label') o.label = t.value.slice(0, C.MAX.label);
-    else {
-      const okDate = !t.value || (t.value.slice(0, 7) === S.month && !own().off.some(x => x !== o && x.date === t.value));
-      row.querySelector('[data-oerr]').hidden = okDate;
-      row.querySelector('[data-oerr]').textContent = t.value.slice(0, 7) === S.month ? 'Date déjà saisie.' : 'Date hors du mois.';
-      o.date = okDate ? t.value : '';
-    }
-    calUpdate();
+    const m = own(), err = $('offErr'), dates = C.rangeDates(S.month, $('offFrom').value, $('offTo').value);
+    const fail = t => { err.textContent = t; err.hidden = false; };
+    if (!dates) return fail($('offFrom').value ? 'Dates invalides : la fin doit suivre le début, dans le même mois.' : 'Choisissez au moins la date de début.');
+    const have = new Set(m.off.map(o => o.date)), add = dates.filter(d => !have.has(d));
+    if (!add.length) return fail('Ces jours sont déjà saisis.');
+    if (m.off.length + add.length > C.MAX.off) return fail('Trop de jours sans classe pour ce mois.');
+    const label = $('offLabel').value.trim().slice(0, C.MAX.label);
+    add.forEach(date => m.off.push({ date, label }));
+    err.hidden = true; $('offFrom').value = $('offTo').value = $('offLabel').value = '';
+    calUI(); calUpdate();
   };
   $('offList').onclick = e => {
     const b = e.target.closest('[data-odel]');
     if (!b) return;
-    own().off.splice(+b.dataset.odel, 1);
+    const g = C.groupOff(own().off).find(x => x.from === b.dataset.odel);
+    if (g) own().off = own().off.filter(o => !g.dates.includes(o.date));
     calUI(); calUpdate();
   };
 
@@ -331,11 +344,12 @@
       catch (e2) { msg('Copie refusée : sélectionnez le tableau à la main.'); }
     }
   };
+  // --- Sauvegarde et reprise : le fichier .json contient TOUT (saisie + zone, rythme, niveaux) ; il est vérifié avant d'être proposé
   let dl = null;
   try { window.claude.use('downloads').then(x => { dl = x; }).catch(() => {}); } catch (e) { /* hors artifact */ }
-  function download(filename, data, type) {
+  function download(filename, data, type, onOk) {
     const msg = t => { $('fileMsg').textContent = t; };
-    if (dl) return dl.save({ filename, data }).then(() => msg('Fichier enregistré.'))
+    if (dl) return dl.save({ filename, data }).then(() => { msg('Fichier enregistré.'); if (onOk) onOk(); })
       .catch(x => msg(x && x.code === 'declined' ? 'Enregistrement annulé.' : 'Enregistrement impossible ici.'));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([data], { type }));
@@ -343,14 +357,38 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     msg('Fichier enregistré.');
+    if (onOk) onOk();
   }
-  $('save').onclick = () => download(`comptappel-${S.year}.json`, JSON.stringify(S, null, 1), 'application/json');
+  // Signature de la saisie (hors mois affiché) pour savoir si elle a changé depuis le dernier fichier
+  const sigOf = () => { const t = JSON.stringify(Object.assign({}, S, { month: '' })); let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return String(h) + ':' + t.length; };
+  const canon = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(y => [y, x[y]])) : x);
+  const goodIso = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v) && !isNaN(Date.parse(v));
+  const nudgeOff = new Set();
+  function saveUI() {
+    const hasData = Object.keys(S.months).length > 0, dirty = P.saveSig !== sigOf(), when = goodIso(P.lastSave) ? new Date(P.lastSave).toLocaleDateString('fr-FR') : '';
+    $('saveState').className = 'hint' + (hasData && (dirty || !when) ? ' bad' : '');
+    $('saveState').textContent = !hasData ? "Aucune saisie à sauvegarder pour l'instant." : !when ? "Aucun fichier enregistré : enregistrez-en un pour garder une copie de sécurité." :
+      dirty ? `Modifications depuis le dernier fichier (${when}) : pensez à enregistrer.` : `Dernier fichier enregistré le ${when} : tout est sauvegardé.`;
+    const show = hasData && dirty && C.monthDone(S, S.month) && !nudgeOff.has(S.month);
+    $('saveNudge').hidden = !show;
+    if (show) $('nudgeTxt').textContent = `${C.mlabel(S.month)} est terminé. Enregistrez un fichier pour garder une copie de sécurité.`;
+  }
+  function saveJson() {
+    const data = Object.assign({ app: 'ComptAppel', savedAt: new Date().toISOString() }, S), text = JSON.stringify(data, null, 1);
+    let ok = false;
+    try { ok = canon(C.normalize(JSON.parse(text))) === canon(S); } catch (e) { /* ok reste faux */ }
+    if (!ok) { $('fileMsg').textContent = "Sauvegarde annulée : le fichier ne se relirait pas à l'identique. Rechargez la page, puis réessayez."; return; }
+    download(`comptappel-${S.year}.json`, text, 'application/json', () => { P.lastSave = data.savedAt; P.saveSig = sigOf(); savePrefs(); saveUI(); });
+  }
+  $('save').onclick = saveJson;
+  $('nudgeSave').onclick = saveJson;
+  $('nudgeLater').onclick = () => { nudgeOff.add(S.month); saveUI(); };
   $('pdf').onclick = () => {
     const b = Pdf.buildPdf(S, new Date().toLocaleDateString('fr-FR'));
     if (!b) { $('fileMsg').textContent = "Rien à exporter : saisissez d'abord un mois."; return; }
     download(`comptappel-${S.year}.pdf`, b, 'application/pdf');
   };
-  let pending = null;
+  let pending = null, pendingRaw = null;
   $('loadBtn').onclick = () => $('load').click();
   $('load').onchange = e => {
     const f = e.target.files[0];
@@ -360,15 +398,26 @@
     f.text().then(t => {
       const o = JSON.parse(t);
       if (!o || typeof o !== 'object' || typeof o.months !== 'object') throw new Error('format');
-      pending = C.normalize(o);
-      const n = Object.keys(pending.months).length;
-      $('importTxt').textContent = `${n} mois trouvé${n > 1 ? 's' : ''} dans « ${f.name} ». Remplacer toute la saisie actuelle ?`;
+      pendingRaw = o; pending = C.normalize(o);
+      const n = Object.keys(pending.months).length, has = C.classSettingsIn(o);
+      const lv = (has.levels ? pending.levels : S.levels).join(' ') || 'aucun', z = Cal.zoneLabel(has.zone ? pending.zone : S.zone), r = (has.rhythm ? pending.rhythm : S.rhythm) === '4' ? '4 jours' : '4,5 jours';
+      $('importTxt').textContent = `« ${f.name} » : ${n} mois, niveaux ${lv}, ${z}, rythme ${r}, année ${pending.year}. Remplacer toute la saisie et les réglages actuels ?`;
       $('importAsk').hidden = false; $('fileMsg').textContent = '';
       $('importOk').focus();
     }).catch(() => { $('fileMsg').textContent = 'Fichier non reconnu.'; });
   };
-  const closeAsk = t => { pending = null; $('importAsk').hidden = true; $('fileMsg').textContent = t; $('loadBtn').focus(); };
-  $('importOk').onclick = () => { S = pending; applyClassPrefs(); save(); refresh(); closeAsk('Fichier chargé.'); };
+  const closeAsk = t => { pending = pendingRaw = null; $('importAsk').hidden = true; $('fileMsg').textContent = t; $('loadBtn').focus(); };
+  $('importOk').onclick = () => {
+    const has = C.classSettingsIn(pendingRaw), raw = pendingRaw;
+    S = pending;
+    // Reprise : les réglages de la classe du fichier priment et deviennent ceux de l'usager ; s'ils n'y figurent pas, on garde les siens
+    if (!has.zone && C.ZONES.includes(P.zone)) S.zone = P.zone;
+    if (!has.rhythm && (P.rhythm === '4' || P.rhythm === '4.5')) S.rhythm = P.rhythm;
+    if (!has.levels && Array.isArray(P.levels)) S.levels = C.normLevels(P.levels);
+    P.zone = S.zone; P.rhythm = S.rhythm; P.levels = S.levels.slice();
+    P.lastSave = goodIso(raw.savedAt) ? raw.savedAt : new Date().toISOString(); P.saveSig = sigOf(); // le fichier et la saisie sont identiques
+    savePrefs(); save(); refresh(); closeAsk('Fichier chargé : saisie et réglages repris.');
+  };
   $('importNo').onclick = () => closeAsk('Chargement annulé.');
 
   // --- Affichage : thème, texte, animations, contraste (P, applyPrefs : scripts/prefs.js)

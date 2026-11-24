@@ -205,4 +205,40 @@ test('détail du calcul : statut de chaque jour, total, formule de chaque niveau
   const feries = C.explain(C.normalize(null, TODAY), '2026-11').days.find(x => x.date === '2026-11-11');
   assert.deepStrictEqual([feries.why, feries.label], ['ferie', 'Armistice']); // le férié est nommé même un mercredi
 });
+test('saisie d’absences : addition « 3+2,5+4 », vide, invalide', () => {
+  assert.strictEqual(C.sumExpr('3+2+4'), 9);
+  assert.strictEqual(C.sumExpr(' 12 '), 12);
+  assert.strictEqual(C.sumExpr('2,5+1'), 4); // arrondi à l'entier (3,5 → 4)
+  assert.strictEqual(C.sumExpr('3+'), 3); // saisie en cours
+  assert.strictEqual(C.sumExpr(''), '');
+  for (const bad of ['a', '3+x', '-2', '3++a', '1e3', '3*2', '<b>']) assert.strictEqual(C.sumExpr(bad), null, bad);
+});
+test('jours sans classe : période du … au …, regroupement pour l’affichage', () => {
+  assert.deepStrictEqual(C.rangeDates('2026-10', '2026-10-12', '2026-10-14'), ['2026-10-12', '2026-10-13', '2026-10-14']);
+  assert.deepStrictEqual(C.rangeDates('2026-10', '2026-10-12', ''), ['2026-10-12']);
+  for (const [f, t] of [['2026-10-12', '2026-10-10'], ['2026-09-30', '2026-10-02'], ['2026-10-12', '2026-11-02'], ['x', ''], ['2026-10-12', 'y']]) assert.strictEqual(C.rangeDates('2026-10', f, t), null, f + t);
+  const g = C.groupOff([{ date: '2026-10-14', label: 'grève' }, { date: '2026-10-12', label: 'grève' }, { date: '2026-10-13', label: 'grève' }, { date: '2026-10-20', label: 'grève' }, { date: '2026-10-21', label: 'neige' }]);
+  assert.deepStrictEqual(g.map(x => [x.from, x.to, x.label, x.dates.length]), [['2026-10-12', '2026-10-14', 'grève', 3], ['2026-10-20', '2026-10-20', 'grève', 1], ['2026-10-21', '2026-10-21', 'neige', 1]]);
+  const s = C.normalize(null, TODAY); s.levels = ['MS'];
+  const oct = C.ensureMonth(s, '2026-10');
+  oct.off = C.rangeDates('2026-10', '2026-10-12', '2026-10-14').map(date => ({ date, label: 'grève' }));
+  assert.strictEqual(C.compute(s, '2026-10').D, 20 - 4); // 12, 13 (classe) et 15 reste ; le mercredi 14 ne compte pas en rythme 4 jours : −2 −2
+});
+test('sauvegarde et reprise : fichier complet, réglages de la classe inclus, aller-retour identique', () => {
+  const s = C.normalize(null, TODAY);
+  s.zone = 'Corse'; s.rhythm = '4.5'; s.levels = ['TPS', 'MS', 'ULIS']; s.year = '2026-2027'; s.month = '2026-11';
+  const oct = C.ensureMonth(s, '2026-10');
+  oct.days = 15; oct.off = [{ date: '2026-10-12', label: 'grève « œ » <b>' }];
+  Object.assign(C.lvData(oct, 'MS'), { n: 10, abs: 4, moves: [{ t: 'a', date: '2026-10-05' }, { t: 'd', date: '2026-10-09' }] });
+  Object.assign(C.lvData(oct, 'TPS'), { n: 2, abs: 0 }); Object.assign(C.lvData(oct, 'ULIS'), { n: 3, abs: 1 });
+  C.ensureMonth(s, '2026-11');
+  const file = JSON.stringify(s, null, 1);              // ce que « Enregistrer un fichier » écrit
+  const back = C.normalize(JSON.parse(file), '2030-01-01'); // ce que « Charger un fichier » relit, un autre jour, sur un autre appareil
+  assert.deepStrictEqual(back, s);                        // rien n'est perdu ni modifié
+  assert.deepStrictEqual([back.zone, back.rhythm, back.levels], ['Corse', '4.5', ['TPS', 'MS', 'ULIS']]);
+  assert.deepStrictEqual(C.cumul(back), C.cumul(s));      // mêmes résultats
+  assert.deepStrictEqual(C.classSettingsIn(JSON.parse(file)), { zone: true, rhythm: true, levels: true });
+  assert.deepStrictEqual(C.classSettingsIn({ months: { '2026-10': { zone: 'B', levels: [] } } }), { zone: true, rhythm: false, levels: true }); // anciens fichiers
+  assert.deepStrictEqual(C.classSettingsIn({ months: {} }), { zone: false, rhythm: false, levels: false });
+});
 console.log(`core : ${n} tests OK`);

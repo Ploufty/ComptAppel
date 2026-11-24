@@ -248,3 +248,10 @@ tr.done td:first-child::after{content:" ✓";color:var(--link);font-weight:800}
 .statbtn:hover{text-decoration-style:solid}
 .statbtn:focus-visible{outline:3px solid var(--link);outline-offset:2px}
 td .statbtn{min-height:0;padding:2px 4px;text-align:left}
+
+/* Rappel de sauvegarde, saisie d'une période sans classe, bouton « Aucune absence » */
+.nudge{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:center;margin:8px 0;padding:12px 16px;border-radius:16px;border:2px solid var(--link);box-shadow:var(--sh-in);font-weight:600;text-align:center}
+.nudge-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.offform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-top:10px}
+.offform input[type=text]{width:12em}
+#zeroAbs{margin-top:14px}

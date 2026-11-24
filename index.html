@@ -42,6 +42,8 @@
 <main class="container" id="main">
   <nav class="months" id="months" aria-label="Mois de l'année : un mois terminé est surligné"></nav>
 
+  <div class="nudge" id="saveNudge" role="status" hidden><span id="nudgeTxt"></span><span class="nudge-btns"><button type="button" class="btn primary" id="nudgeSave">Enregistrer un fichier</button><button type="button" class="btn ghost" id="nudgeLater">Plus tard</button></span></div>
+
   <button type="button" class="calbtn" id="calBtn" aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
     <span id="calTxt"></span><span class="calmod">Modifier</span>
@@ -57,8 +59,9 @@
     <section class="pane" id="p-saisie" role="tabpanel" aria-labelledby="t-saisie">
       <div class="pane-head"><h2>Saisie du mois</h2><button type="button" class="btn" id="lvBtn" aria-haspopup="dialog">Niveaux</button></div>
       <div id="rows"></div>
+      <button type="button" class="btn" id="zeroAbs" hidden>Aucune absence : mettre 0 aux niveaux vides</button>
       <p class="sumline" id="saisieSum"></p>
-      <p class="hint" id="rowsHint">Élèves présents tout le mois, absences en demi-journées (une journée entière = 2). Le bouton <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg> à droite d'une ligne sert à signaler l'arrivée ou le départ d'un élève en cours de mois. Entrée passe au champ suivant. Les élèves sont repris du mois précédent (arrivées et départs inclus) : modifiez-les si besoin.</p>
+      <p class="hint" id="rowsHint">Élèves présents tout le mois, absences en demi-journées (une journée entière = 2) : un total ou une addition, par exemple 3+2+4. Le bouton <svg class="inl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3.2"/><path d="M2.5 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><path d="M17 6.5h4.5m0 0-1.8-1.8M21.5 6.5l-1.8 1.8M21.5 13H17m0 0 1.8-1.8M17 13l1.8 1.8"/></svg> à droite d'une ligne sert à signaler l'arrivée ou le départ d'un élève en cours de mois. Entrée passe au champ suivant. Les élèves sont repris du mois précédent (arrivées et départs inclus) : modifiez-les si besoin.</p>
     </section>
 
     <section class="pane" id="p-resultat" role="tabpanel" aria-labelledby="t-resultat">
@@ -85,6 +88,7 @@
         <p id="importTxt"></p>
         <div class="bar"><button type="button" class="btn primary" id="importOk">Remplacer</button><button type="button" class="btn" id="importNo">Annuler</button></div>
       </div>
+      <p class="hint" id="saveState"></p>
       <p class="hint" id="fileMsg" role="status"></p>
       <p class="hint">Le fichier contient toute la saisie de l'année. Enregistrez-le après chaque mois, rechargez-le pour retrouver vos données sur un autre appareil.</p>
     </section>
@@ -111,9 +115,15 @@
     </div>
     <button type="button" class="btn ghost" id="calLink">Voir comment les demi-journées sont comptées</button>
     <fieldset><legend>Jours sans classe</legend>
-      <p class="hint">Grève, fermeture, pont, journée pédagogique… retirés du décompte.</p>
+      <p class="hint">Grève, fermeture, pont, journée pédagogique… retirés du décompte. Une date, ou une période « du … au … ».</p>
       <div id="offList"></div>
-      <button type="button" class="btn" id="offAdd">+ Ajouter un jour sans classe</button>
+      <div class="offform">
+        <div class="fld"><label for="offFrom">Du</label><input type="date" id="offFrom"></div>
+        <div class="fld"><label for="offTo">Au (facultatif)</label><input type="date" id="offTo"></div>
+        <div class="fld"><label for="offLabel">Motif (facultatif)</label><input type="text" id="offLabel" maxlength="60" autocomplete="off"></div>
+        <button type="button" class="btn" id="offAdd">Ajouter</button>
+      </div>
+      <p class="hint bad" id="offErr" role="alert" hidden></p>
       <p class="hint" id="offNote"></p>
     </fieldset>
     <div class="settings-foot"><span></span><button type="button" class="btn primary" data-close>Terminé</button></div>
@@ -143,16 +153,34 @@
 <dialog id="help" aria-labelledby="help-title">
   <div class="settings help">
     <div class="settings-head"><h2 id="help-title">Comment ça marche ?</h2><button type="button" class="icon-btn" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-    <p>ComptAppel calcule le pourcentage de présents du cahier d'appel, chaque mois, pour la classe et par niveau.</p>
+    <p>ComptAppel calcule le pourcentage de présents et d'absents du cahier d'appel, chaque mois, pour la classe entière et par niveau.</p>
+    <h3>Pour commencer</h3>
     <ol>
-      <li><b>Choisissez le mois</b> en haut. La zone, le rythme et les demi-journées de classe sont dans « Calendrier du mois » (calcul automatique, modifiable).</li>
-      <li><b>Niveaux</b> : bouton « Niveaux » pour cocher ceux de la classe.</li>
-      <li><b>Saisissez</b>, pour chaque niveau, les élèves présents tout le mois et les absences en demi-journées. Entrée passe au champ suivant.</li>
-      <li><b>Arrivée ou départ en cours de mois</b> : bouton à droite de la ligne du niveau.</li>
-      <li><b>Résultat</b> : en direct (à côté de la saisie, ou dans l'onglet Résultat sur petit écran). L'onglet Année donne le cumul, le PDF et la sauvegarde.</li>
+      <li><b>Classe</b> : dans « Calendrier du mois », choisissez la zone et le rythme ; avec « Niveaux », cochez ceux de la classe. Ces réglages sont <b>les mêmes toute l'année</b> et mémorisés pour vous.</li>
+      <li><b>Choisissez le mois</b> avec la rangée de mois ou les flèches. Les demi-journées de classe se calculent seules (vacances, fériés, week-ends) et restent modifiables.</li>
+      <li><b>Saisissez</b>, pour chaque niveau, les élèves présents tout le mois et les absences en demi-journées (une journée entière = 2). Pour les absences, vous pouvez taper une <b>addition</b> : 3+2+4 donne 9. Entrée passe au champ suivant.</li>
+      <li><b>Aucune absence</b> : le bouton « Aucune absence » met 0 aux niveaux dont les absences sont vides.</li>
+      <li><b>Un mois est terminé</b> (surligné ✓) quand chaque niveau a ses élèves et ses absences saisis. Le mois suivant reprend les élèves du mois précédent, arrivées et départs inclus : modifiez-les si besoin.</li>
     </ol>
-    <div class="formula">Présences possibles = élèves × demi-journées de classe (+ celles des élèves arrivés ou partis)<br>Présences = possibles − absences<br>% présents = présences ÷ possibles × 100</div>
-    <p class="hint">Rien n'est envoyé sur internet. Les données restent dans ce navigateur.</p>
+    <h3>Cas particuliers</h3>
+    <ul>
+      <li><b>Arrivée ou départ d'un élève</b> : bouton à droite de la ligne du niveau. L'élève est compté à partir du jour d'arrivée, ou jusqu'au jour de départ inclus.</li>
+      <li><b>Jours sans classe</b> (grève, fermeture, pont…) : dans « Calendrier du mois », ajoutez une date ou une période « du … au … ».</li>
+    </ul>
+    <h3>Résultats</h3>
+    <ul>
+      <li>Le résultat s'affiche en direct : % de présents puis % d'absents, pour chaque niveau et pour la classe entière.</li>
+      <li><b>Voir le calcul</b> : cliquez sur un chiffre du résultat, sur « Voir le détail du calcul » ou sur un mois du cumul. Dans « Affichage », vous pouvez l'afficher en permanence sous le résultat.</li>
+      <li><b>Copier le résultat</b> donne un tableau sans mise en forme, à coller dans un message, un document ou un tableur.</li>
+      <li>L'onglet <b>Année</b> donne le cumul de la classe et de chaque niveau, avec l'export PDF.</li>
+    </ul>
+    <div class="formula">Présences possibles = élèves × demi-journées de classe (+ celles des élèves arrivés ou partis)<br>Présences = possibles − absences<br>% présents = présences ÷ possibles × 100 ; % absents = absences ÷ possibles × 100</div>
+    <h3>Sauvegarde : important</h3>
+    <ul>
+      <li>Rien n'est envoyé sur internet : vos données restent <b>dans ce navigateur</b>. Si vous videz les données du navigateur ou changez d'ordinateur, elles disparaissent.</li>
+      <li>Dans l'onglet Année, <b>« Enregistrer un fichier »</b> crée un fichier .json qui contient tout : la saisie de l'année, la zone, le rythme et les niveaux. Faites-le à la fin de chaque mois : un rappel s'affiche quand un mois est terminé.</li>
+      <li><b>« Charger un fichier »</b> reprend tout, saisie et réglages, après confirmation. L'état de la dernière sauvegarde est indiqué dans l'onglet Année.</li>
+    </ul>
     <div class="settings-foot"><span></span><button type="button" class="btn primary" data-close>Compris</button></div>
   </div>
 </dialog>

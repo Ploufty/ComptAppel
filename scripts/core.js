@@ -182,12 +182,53 @@
     return { plain, html };
   }
 
+
+  // --- Aides de saisie
+  // Somme d'une saisie « 3+2,5+4 » (arrondie à l'entier) ; '' si vide ; null si la saisie n'est pas reconnue
+  function sumExpr(v) {
+    const t = String(v === null || v === undefined ? '' : v).replace(/\s+/g, '');
+    if (t === '') return '';
+    const parts = t.split('+').filter(p => p !== '');
+    if (!parts.length || !parts.every(p => /^\d+([.,]\d+)?$/.test(p))) return null;
+    return Math.round(parts.reduce((a, p) => a + parseFloat(p.replace(',', '.')), 0));
+  }
+  // Dates d'une période dans un mois (bornes incluses ; « au » facultatif) ; null si invalide
+  function rangeDates(mk, from, to) {
+    const ok = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d.slice(0, 7) === mk && +d.slice(8) >= 1 && +d.slice(8) <= Cal.daysInMonth(mk);
+    const end = to || from;
+    if (!ok(from) || !ok(end) || end < from) return null;
+    const out = [];
+    for (let d = +from.slice(8); d <= +end.slice(8); d++) out.push(mk + '-' + String(d).padStart(2, '0'));
+    return out;
+  }
+  // Jours sans classe regroupés par période (jours consécutifs de même motif) pour l'affichage
+  function groupOff(off) {
+    const next = d => new Date(Date.parse(d + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10);
+    const g = [];
+    for (const o of off.filter(x => x.date).slice().sort((a, b) => a.date < b.date ? -1 : 1)) {
+      const last = g[g.length - 1];
+      if (last && last.label === o.label && next(last.to) === o.date) { last.to = o.date; last.dates.push(o.date); }
+      else g.push({ from: o.date, to: o.date, label: o.label, dates: [o.date] });
+    }
+    return g;
+  }
+  // Réglages de la classe présents dans un fichier (au premier niveau ou, pour les anciens fichiers, dans les mois)
+  function classSettingsIn(raw) {
+    if (!isObj(raw)) return {};
+    const ms = isObj(raw.months) ? Object.keys(raw.months).map(k => raw.months[k]).filter(isObj) : [];
+    return {
+      zone: ZONES.includes(raw.zone) || ms.some(m => ZONES.includes(m.zone)),
+      rhythm: raw.rhythm === '4' || raw.rhythm === '4.5' || ms.some(m => m.rhythm === '4' || m.rhythm === '4.5'),
+      levels: Array.isArray(raw.levels) || ms.some(m => Array.isArray(m.levels))
+    };
+  }
+
   // Mois « fait » : au moins un niveau, et pour chacun un effectif et des absences saisis (0 compte)
   function monthDone(s, mk) {
     const m = s.months[mk];
     return !!m && s.levels.length > 0 && s.levels.every(l => m.lv[l] && num(m.lv[l].n) > 0 && m.lv[l].abs !== '');
   }
 
-  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, ZONES, normLevels, mlabel, mshort, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul, monthDone, copyData, explain };
+  const api = { MAIN_LEVELS, EXTRA_LEVELS, LEVELS, MOIS, MAX, YEARS, ZONES, normLevels, mlabel, mshort, fmt, fresh, normalize, ensureMonth, viewMonth, lvData, daysOf, moveDJ, compute, cumul, monthDone, copyData, explain, sumExpr, rangeDates, groupOff, classSettingsIn };
   if (typeof module !== 'undefined') module.exports = api; else root.Core = api;
 })(this);
