@@ -261,3 +261,6 @@ fieldset.danger{border:2px solid var(--warn);border-radius:16px;padding:14px;dis
 fieldset.danger legend{color:var(--warn);padding:0 6px}
 .resetopts{flex-direction:column;align-items:stretch}
 .resetopts span{white-space:normal}
+
+/* Crédit en bas des réglages */
+.credit{margin:0;text-align:center;font-size:.8rem;color:var(--muted)}
